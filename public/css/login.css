@@ -1,0 +1,165 @@
+/* Layout */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 20px;
+    gap: 40px;
+}
+
+.auth-box {
+    width: 380px;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.auth-title {
+    font-size: 26px;
+    margin-bottom: 5px;
+    color: #1b1f3b;
+}
+
+.auth-subtitle {
+    color: #555;
+    font-size: 14px;
+}
+
+/* Tabs */
+.auth-tabs {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.auth-tab {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: #eee;
+    cursor: pointer;
+    font-weight: bold;
+    border-radius: 8px;
+    transition: 0.2s;
+}
+
+.auth-tab.active {
+    background: #1b1f3b;
+    color: white;
+}
+
+/* Forms */
+.auth-form.hidden {
+    display: none;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    font-size: 14px;
+    color: #222;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #bbb;
+    border-radius: 6px;
+    margin-top: 5px;
+    font-size: 15px;
+}
+
+/* Options */
+.form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.forgot-password {
+    color: #1b1f3b;
+    text-decoration: none;
+}
+
+/* Buttons */
+.btn {
+    padding: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    font-size: 16px;
+}
+
+.btn-primary {
+    background: #1b1f3b;
+    color: white;
+}
+
+.btn-full {
+    width: 100%;
+    margin-top: 10px;
+}
+
+/* Messages */
+.error-message {
+    color: #d00000;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.success-message {
+    color: #009f47;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+/* Features right side */
+.auth-features {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 30px;
+}
+
+.feature-badge {
+    background: #1b1f3b;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+}
+
+.badge-icon {
+    background: white;
+    color: #1b1f3b;
+    border-radius: 50%;
+    padding: 4px 8px;
+    font-weight: bold;
+}
+
+/* Demo info */
+.demo-info {
+    background: #f7f7f7;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 20px;
+    font-size: 14px;
+}

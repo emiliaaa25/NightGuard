@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - NightSafe</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/profile.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1><a href="/">🌙 NightSafe</a></h1>
+            </div>
+            <div class="nav-links" id="navLinks">
+                <a href="/">Home</a>
+                <a href="/profile">Profile</a>
+                <a href="#" id="logoutBtn" class="btn-logout">Logout</a>
+            </div>
+            <button class="hamburger" id="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <main class="profile-container">
+        <div class="container">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <div class="avatar-circle" id="avatarDisplay">
+                        <span id="avatarInitials">U</span>
+                    </div>
+                    <button class="btn-change-avatar">Change Photo</button>
+                </div>
+                <div class="profile-info">
+                    <h1 id="profileName">Loading...</h1>
+                    <p id="profileEmail">email@example.com</p>
+                    <div class="profile-badges">
+                        <span class="badge badge-verified">✓ Verified</span>
+                        <span class="badge badge-user" id="userTypeBadge">User</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-content">
+                <div class="profile-tabs">
+                    <button class="tab-btn active" data-tab="personal">Personal Info</button>
+                    <button class="tab-btn" data-tab="emergency">Emergency Contacts</button>
+                    <button class="tab-btn" data-tab="safety">Safety Settings</button>
+                </div>
+
+                <!-- Personal Info Tab -->
+                <div class="tab-content active" id="personal-tab">
+                    <div class="profile-section">
+                        <h3>Personal Information</h3>
+                        <form id="profileForm">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="fullName">Full Name</label>
+                                    <input type="text" id="fullName" placeholder="Your full name">
+                                </div>
+                                <div class="form-group">
+                                    <label for="username">Username</label>
+                                    <input type="text" id="username" placeholder="username" disabled>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="email">Email</label>
+                                    <input type="email" id="email" placeholder="your@email.com" disabled>
+                                </div>
+                                <div class="form-group">
+                                    <label for="phone">Phone Number</label>
+                                    <input type="tel" id="phone" placeholder="+40 xxx xxx xxx">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="bio">Bio</label>
+                                <textarea id="bio" rows="4" placeholder="Tell us about yourself..."></textarea>
+                            </div>
+                            <div id="profileError" class="error-message"></div>
+                            <div id="profileSuccess" class="success-message"></div>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Emergency Contacts Tab -->
+                <div class="tab-content" id="emergency-tab">
+                    <div class="profile-section">
+                        <div class="section-header">
+                            <h3>Emergency Contacts</h3>
+                            <p>Add up to 3 trusted contacts who will be notified in emergencies</p>
+                        </div>
+                        
+                        <div class="emergency-contacts-list" id="contactsList">
+                            <div class="contact-card">
+                                <div class="contact-info">
+                                    <div class="contact-icon">👤</div>
+                                    <div>
+                                        <h4>No contacts added yet</h4>
+                                        <p>Add your first emergency contact below</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-secondary" id="addContactBtn">
+                            <span>+ Add Emergency Contact</span>
+                        </button>
+
+                        <!-- Add Contact Modal (hidden by default) -->
+                        <div id="addContactModal" class="modal hidden">
+                            <div class="modal-content">
+                                <h3>Add Emergency Contact</h3>
+                                <form id="addContactForm">
+                                    <div class="form-group">
+                                        <label>Name</label>
+                                        <input type="text" id="contactName" placeholder="Contact's full name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Phone Number</label>
+                                        <input type="tel" id="contactPhone" placeholder="+40 xxx xxx xxx" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Email (optional)</label>
+                                        <input type="email" id="contactEmail" placeholder="contact@email.com">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Relationship</label>
+                                        <select id="contactRelationship">
+                                            <option value="parent">Parent</option>
+                                            <option value="sibling">Sibling</option>
+                                            <option value="partner">Partner</option>
+                                            <option value="friend">Friend</option>
+                                            <option value="roommate">Roommate</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="modal-actions">
+                                        <button type="button" class="btn btn-secondary" id="cancelContactBtn">Cancel</button>
+                                        <button type="submit" class="btn btn-primary">Save Contact</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Safety Settings Tab -->
+                <div class="tab-content" id="safety-tab">
+                    <div class="profile-section">
+                        <h3>Safety Preferences</h3>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Auto-Alert Timeout</h4>
+                                <p>How long after expected arrival before automatic alert is sent</p>
+                            </div>
+                            <select class="setting-control">
+                                <option value="3">3 minutes</option>
+                                <option value="5" selected>5 minutes</option>
+                                <option value="10">10 minutes</option>
+                                <option value="15">15 minutes</option>
+                            </select>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Night Guardian Radius</h4>
+                                <p>Distance to search for Night Guardians in emergencies</p>
+                            </div>
+                            <select class="setting-control">
+                                <option value="250">250 meters</option>
+                                <option value="500" selected>500 meters</option>
+                                <option value="1000">1 kilometer</option>
+                            </select>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Shake Detection Sensitivity</h4>
+                                <p>How sensitive the panic button shake detection should be</p>
+                            </div>
+                            <select class="setting-control">
+                                <option value="low">Low (harder to trigger)</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High (easier to trigger)</option>
+                            </select>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Audio Recording</h4>
+                                <p>Record 60 seconds of audio when panic button is activated</p>
+                            </div>
+                            <label class="toggle">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Location Sharing</h4>
+                                <p>Always keep location sharing on for faster emergency response</p>
+                            </div>
+                            <label class="toggle">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <button class="btn btn-primary">Save Safety Settings</button>
+                    </div>
+
+                    <div class="profile-section danger-zone">
+                        <h3>Danger Zone</h3>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Delete Account</h4>
+                                <p>Permanently delete your account and all associated data</p>
+                            </div>
+                            <button class="btn btn-danger">Delete Account</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 NightSafe. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/profile.js"></script>
+</body>
+</html>
