@@ -3,109 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - NightSafe</title>
+    <title>Login - NightGuard</title>
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/login.css">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="container">
-            <div class="nav-brand">
-                <h1><a href="/">🌙 NightSafe</a></h1>
+    <main class="auth-shell">
+        <section class="auth-card">
+            <!-- Left Panel: Illustration -->
+            <div class="auth-illustration-panel">
+                <div class="auth-illustration">
+                    <!-- Illustration will be styled with CSS gradient background -->
+                    <div class="illustration-content">
+                        <div class="illustration-circle"></div>
+                        <div class="illustration-dots"></div>
+                        <div class="illustration-people">
+                            <div class="person person-1"></div>
+                            <div class="person person-2"></div>
+                            <div class="person person-3"></div>
+                            <div class="person person-4"></div>
+                            <div class="person person-5"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </nav>
 
-    <main class="auth-container">
-        <div class="auth-box">
-            <div class="auth-header">
-                <h2 class="auth-title" id="authTitle">Welcome Back</h2>
-                <p class="auth-subtitle">Sign in to your NightSafe account</p>
-            </div>
-            
-            <div class="auth-tabs">
-                <button class="auth-tab active" id="loginTab">Sign In</button>
-                <button class="auth-tab" id="registerTab">Sign Up</button>
-            </div>
+            <!-- Right Panel: Forms -->
+            <div class="auth-form-panel">
+                <!-- Login Form -->
+                <div id="loginSection" class="auth-section active">
+                    <h2 class="auth-title">Log in</h2>
+                    <p class="auth-subtitle">Access your NightGuard account</p>
 
-            <!-- Login Form -->
-            <form id="loginForm" class="auth-form">
-                <div class="form-group">
-                    <label for="loginEmail">Email Address</label>
-                    <input type="email" id="loginEmail" placeholder="your@email.com" required>
-                </div>
-                <div class="form-group">
-                    <label for="loginPassword">Password</label>
-                    <input type="password" id="loginPassword" placeholder="Enter your password" required>
-                </div>
-                <div class="form-options">
-                    <label class="checkbox">
-                        <input type="checkbox" id="rememberMe">
-                        <span>Remember me</span>
-                    </label>
-                    <a href="#" class="forgot-password">Forgot password?</a>
-                </div>
-                <div id="loginError" class="error-message"></div>
-                <div id="loginSuccess" class="success-message"></div>
-                <button type="submit" class="btn btn-primary btn-full">Sign In</button>
-            </form>
+                    <form id="loginForm" class="auth-form">
+                        <div class="form-group">
+                            <label for="loginEmail">Email</label>
+                            <div class="input-wrapper">
+                                <input
+                                    type="email"
+                                    id="loginEmail"
+                                    placeholder="Enter your email"
+                                    required
+                                >
+                                <span class="input-icon">✉</span>
+                            </div>
+                        </div>
 
-            <!-- Register Form -->
-            <form id="registerForm" class="auth-form hidden">
-                <div class="form-group">
-                    <label for="registerUsername">Username</label>
-                    <input type="text" id="registerUsername" placeholder="Choose a username" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerEmail">Email Address</label>
-                    <input type="email" id="registerEmail" placeholder="your@email.com" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerFullName">Full Name</label>
-                    <input type="text" id="registerFullName" placeholder="Your full name">
-                </div>
-                <div class="form-group">
-                    <label for="registerPassword">Password</label>
-                    <input type="password" id="registerPassword" placeholder="Minimum 6 characters" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerConfirmPassword">Confirm Password</label>
-                    <input type="password" id="registerConfirmPassword" placeholder="Re-enter password" required>
-                </div>
-                <div class="form-checkbox">
-                    <label class="checkbox">
-                        <input type="checkbox" id="agreeTerms" required>
-                        <span>I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></span>
-                    </label>
-                </div>
-                <div id="registerError" class="error-message"></div>
-                <div id="registerSuccess" class="success-message"></div>
-                <button type="submit" class="btn btn-primary btn-full">Create Account</button>
-            </form>
+                        <div class="form-group">
+                            <label for="loginPassword">Password</label>
+                            <div class="input-wrapper">
+                                <input
+                                    type="password"
+                                    id="loginPassword"
+                                    placeholder="••••••••••"
+                                    required
+                                >
+                                <span class="input-icon">🔑</span>
+                            </div>
+                        </div>
 
-            <div class="auth-footer">
-                <div class="demo-info">
-                    <p>🔒 Demo Account</p>
-                    <p><strong>Email:</strong> test@example.com</p>
-                    <p><strong>Password:</strong> test123</p>
+                        <div class="form-options-row">
+                            <label class="checkbox">
+                                <input type="checkbox" id="rememberMe">
+                                <span>Remember me</span>
+                            </label>
+                        </div>
+
+                        <div id="loginError" class="error-message"></div>
+                        <div id="loginSuccess" class="success-message"></div>
+
+                        <button type="submit" class="auth-button">
+                            Log In
+                        </button>
+
+                        <p class="auth-switch">
+                            Not a member? <a href="#" id="showRegister">Sign up</a>
+                        </p>
+                    </form>
+                </div>
+
+                <!-- Register Form -->
+                <div id="registerSection" class="auth-section">
+                    <h2 class="auth-title">Sign up</h2>
+                    <p class="auth-subtitle">Join the NightGuard community now</p>
+
+                    <form id="registerForm" class="auth-form">
+                        <div class="form-group">
+                            <label for="registerFullName">Full name</label>
+                            <div class="input-wrapper">
+                                <input
+                                    type="text"
+                                    id="registerFullName"
+                                    placeholder="First Last"
+                                    required
+                                >
+                                <span class="input-icon">🆔</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="registerEmail">Email</label>
+                            <div class="input-wrapper">
+                                <input
+                                    type="email"
+                                    id="registerEmail"
+                                    placeholder="Enter your email"
+                                    required
+                                >
+                                <span class="input-icon">✉</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="registerUsername">Username</label>
+                            <div class="input-wrapper">
+                                <input
+                                    type="text"
+                                    id="registerUsername"
+                                    placeholder="Choose your username"
+                                    required
+                                >
+                                <span class="input-icon">👤</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="registerPassword">Set your password</label>
+                            <div class="input-wrapper">
+                                <input
+                                    type="password"
+                                    id="registerPassword"
+                                    placeholder="••••••••••"
+                                    required
+                                >
+                                <span class="input-icon">🔑</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="registerConfirmPassword">Confirm your</label>
+                            <div class="input-wrapper">
+                                <input
+                                    type="password"
+                                    id="registerConfirmPassword"
+                                    placeholder="••••••••••"
+                                    required
+                                >
+                                <span class="input-icon">🔒</span>
+                            </div>
+                        </div>
+
+                        <div class="form-checkbox-row">
+                            <label class="checkbox checkbox-purple">
+                                <input type="checkbox" id="agreeTerms" required>
+                                <span>I accept Terms and Privacy Policy</span>
+                            </label>
+                        </div>
+
+                        <div id="registerError" class="error-message"></div>
+                        <div id="registerSuccess" class="success-message"></div>
+
+                        <button type="submit" class="auth-button auth-button-purple">
+                            Sign up
+                        </button>
+
+                        <p class="auth-switch">
+                            Already a member? <a href="#" id="showLogin">Log in</a>
+                        </p>
+                    </form>
                 </div>
             </div>
-        </div>
-
-        <div class="auth-features">
-            <div class="feature-badge">
-                <span class="badge-icon">✓</span>
-                <span>Free 30-day trial</span>
-            </div>
-            <div class="feature-badge">
-                <span class="badge-icon">✓</span>
-                <span>No credit card required</span>
-            </div>
-            <div class="feature-badge">
-                <span class="badge-icon">✓</span>
-                <span>Cancel anytime</span>
-            </div>
-        </div>
+        </section>
     </main>
 
     <script src="/js/login.js"></script>

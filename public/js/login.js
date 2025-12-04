@@ -1,115 +1,122 @@
-// Tabs switching
-const loginTab = document.getElementById("loginTab");
-const registerTab = document.getElementById("registerTab");
-const loginForm = document.getElementById("loginForm");
-const registerForm = document.getElementById("registerForm");
-const authTitle = document.getElementById("authTitle");
+// Form toggle functionality
+const loginSection = document.getElementById("loginSection");
+const registerSection = document.getElementById("registerSection");
+const showLoginLink = document.getElementById("showLogin");
+const showRegisterLink = document.getElementById("showRegister");
 
-// Switch to Login
-loginTab.addEventListener("click", () => {
-    loginTab.classList.add("active");
-    registerTab.classList.remove("active");
-    loginForm.classList.remove("hidden");
-    registerForm.classList.add("hidden");
-    authTitle.textContent = "Welcome Back";
-});
+if (showLoginLink) {
+    showLoginLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        registerSection.classList.remove("active");
+        loginSection.classList.add("active");
+    });
+}
 
-// Switch to Register
-registerTab.addEventListener("click", () => {
-    registerTab.classList.add("active");
-    loginTab.classList.remove("active");
-    registerForm.classList.remove("hidden");
-    loginForm.classList.add("hidden");
-    authTitle.textContent = "Create Your Account";
-});
+if (showRegisterLink) {
+    showRegisterLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        loginSection.classList.remove("active");
+        registerSection.classList.add("active");
+    });
+}
 
 // LOGIN FORM SUBMIT
-loginForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
+const loginForm = document.getElementById("loginForm");
+if (loginForm) {
+    loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-    const email = document.getElementById("loginEmail").value.trim();
-    const password = document.getElementById("loginPassword").value.trim();
+        const email = document.getElementById("loginEmail").value.trim();
+        const password = document.getElementById("loginPassword").value.trim();
 
-    const errorMsg = document.getElementById("loginError");
-    const successMsg = document.getElementById("loginSuccess");
+        const errorMsg = document.getElementById("loginError");
+        const successMsg = document.getElementById("loginSuccess");
 
-    errorMsg.textContent = "";
-    successMsg.textContent = "";
+        errorMsg.textContent = "";
+        successMsg.textContent = "";
 
-    try {
-        const response = await fetch("/api/auth/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password })
-        });
+        try {
+            const response = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (!response.ok) {
-            errorMsg.textContent = data.error || "Login failed";
-            return;
+            if (!response.ok) {
+                errorMsg.textContent = data.error || "Login failed";
+                return;
+            }
+
+            successMsg.textContent = "Login successful! Redirecting...";
+            localStorage.setItem("token", data.token);
+
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1200);
+
+        } catch (err) {
+            errorMsg.textContent = "Server error. Try again later.";
         }
-
-        successMsg.textContent = "Login successful! Redirecting...";
-        localStorage.setItem("token", data.token);
-
-        setTimeout(() => {
-            window.location.href = '/profile';
-        }, 1200);
-
-    } catch (err) {
-        errorMsg.textContent = "Server error. Try again later.";
-    }
-});
+    });
+}
 
 // REGISTER FORM SUBMIT
-registerForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
+const registerForm = document.getElementById("registerForm");
+if (registerForm) {
+    registerForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-    const username = document.getElementById("registerUsername").value.trim();
-    const email = document.getElementById("registerEmail").value.trim();
-    const full_name = document.getElementById("registerFullName").value.trim();
-    const password = document.getElementById("registerPassword").value.trim();
-    const confirmPassword = document.getElementById("registerConfirmPassword").value.trim();
-    const agreeTerms = document.getElementById("agreeTerms").checked;
+        const fullName = document.getElementById("registerFullName").value.trim();
+        const email = document.getElementById("registerEmail").value.trim();
+        const username = document.getElementById("registerUsername").value.trim();
+        const password = document.getElementById("registerPassword").value.trim();
+        const confirmPassword = document.getElementById("registerConfirmPassword").value.trim();
+        const agreeTerms = document.getElementById("agreeTerms").checked;
 
-    const errorMsg = document.getElementById("registerError");
-    const successMsg = document.getElementById("registerSuccess");
+        const errorMsg = document.getElementById("registerError");
+        const successMsg = document.getElementById("registerSuccess");
 
-    errorMsg.textContent = "";
-    successMsg.textContent = "";
+        errorMsg.textContent = "";
+        successMsg.textContent = "";
 
-    if (password !== confirmPassword) {
-        errorMsg.textContent = "Passwords do not match.";
-        return;
-    }
-
-    if (!agreeTerms) {
-        errorMsg.textContent = "You must agree to the Terms.";
-        return;
-    }
-
-    try {
-        const response = await fetch("/api/auth/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, email, full_name, password })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            errorMsg.textContent = data.error || "Registration failed";
+        // Validation
+        if (password !== confirmPassword) {
+            errorMsg.textContent = "Passwords do not match.";
             return;
         }
 
-        successMsg.textContent = "Account created! You can sign in now.";
+        if (!agreeTerms) {
+            errorMsg.textContent = "You must accept the Terms and Privacy Policy.";
+            return;
+        }
 
-        setTimeout(() => {
-            loginTab.click();
-        }, 1500);
+        try {
+            const response = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, email, fullName, password })
+            });
 
-    } catch (err) {
-        errorMsg.textContent = "Server error. Try again later.";
-    }
-});
+            const data = await response.json();
+
+            if (!response.ok) {
+                errorMsg.textContent = data.error || "Registration failed";
+                return;
+            }
+
+            successMsg.textContent = "Account created! Redirecting to login...";
+
+            setTimeout(() => {
+                registerSection.classList.remove("active");
+                loginSection.classList.add("active");
+                // Clear form
+                registerForm.reset();
+            }, 1500);
+
+        } catch (err) {
+            errorMsg.textContent = "Server error. Try again later.";
+        }
+    });
+}

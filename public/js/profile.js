@@ -1,210 +1,202 @@
-// API Configuration
-const API_URL = window.location.origin;
-
 document.addEventListener('DOMContentLoaded', () => {
-    // Check authentication
+    initProfile();
+});
+
+function initProfile() {
+    loadUserProfile();
+    renderAchievements();
+    renderNearbyConnections();
+    renderCommunity();
+    setupFriendsActions();
+}
+
+// Load user profile data
+async function loadUserProfile() {
     const token = localStorage.getItem('token');
     if (!token) {
         window.location.href = '/login';
         return;
     }
 
-    // Load user profile
-    loadUserProfile();
-
-    // Setup event listeners
-    setupEventListeners();
-    
-    // Setup logout
-    document.getElementById('logoutBtn').addEventListener('click', handleLogout);
-});
-
-function setupEventListeners() {
-    // Tab switching
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tabName = btn.dataset.tab;
-            switchTab(tabName);
-        });
-    });
-
-    // Profile form submit
-    document.getElementById('profileForm').addEventListener('submit', handleProfileUpdate);
-
-    // Add emergency contact
-    const addContactBtn = document.getElementById('addContactBtn');
-    const cancelContactBtn = document.getElementById('cancelContactBtn');
-    const addContactModal = document.getElementById('addContactModal');
-    const addContactForm = document.getElementById('addContactForm');
-
-    addContactBtn.addEventListener('click', () => {
-        addContactModal.classList.remove('hidden');
-    });
-
-    cancelContactBtn.addEventListener('click', () => {
-        addContactModal.classList.add('hidden');
-        addContactForm.reset();
-    });
-
-    addContactForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        // Here you would save the contact to the database
-        addContactModal.classList.add('hidden');
-        addContactForm.reset();
-        showMessage('Emergency contact added successfully!', 'success');
-    });
-
-    // Mobile hamburger
-    const hamburger = document.getElementById('hamburger');
-    const navLinks = document.getElementById('navLinks');
-    
-    if (hamburger) {
-        hamburger.addEventListener('click', () => {
-            navLinks.classList.toggle('active');
-        });
-    }
-}
-
-function switchTab(tabName) {
-    // Remove active class from all tabs and contents
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-
-    // Add active class to selected tab
-    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-    document.getElementById(`${tabName}-tab`).classList.add('active');
-}
-
-async function loadUserProfile() {
-    const token = localStorage.getItem('token');
-    
     try {
-        const response = await fetch(`${API_URL}/api/user/profile`, {
+        const response = await fetch('/api/user/profile', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
 
-        if (response.ok) {
-            const data = await response.json();
-            displayUserProfile(data.user);
-        } else if (response.status === 401) {
-            // Token expired or invalid
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/login';
-        } else {
-            showMessage('Failed to load profile', 'error');
+        if (!response.ok) {
+            throw new Error('Failed to load profile');
+        }
+
+        const data = await response.json();
+        
+        // Update profile information
+        if (data.user) {
+            document.getElementById('profileName').textContent = data.user.full_name || data.user.username || 'User';
+            if (data.user.email) {
+                // Email is not shown in the new design, but we keep it for reference
+            }
         }
     } catch (error) {
         console.error('Error loading profile:', error);
-        showMessage('Network error. Please try again.', 'error');
+        // Use default values if API fails
     }
 }
 
-function displayUserProfile(user) {
-    // Update profile header
-    document.getElementById('profileName').textContent = user.full_name || user.username;
-    document.getElementById('profileEmail').textContent = user.email;
-    
-    // Set avatar initials
-    const initials = (user.full_name || user.username).charAt(0).toUpperCase();
-    document.getElementById('avatarInitials').textContent = initials;
-
-    // Update user type badge
-    const userTypeBadge = document.getElementById('userTypeBadge');
-    if (user.user_type === 'night_guardian') {
-        userTypeBadge.textContent = '🛡️ Night Guardian';
-        userTypeBadge.style.background = '#dcfce7';
-        userTypeBadge.style.color = '#059669';
-    } else {
-        userTypeBadge.textContent = 'User';
+// Achievements data
+const achievementsData = [
+    {
+        id: 1,
+        icon: '🏆',
+        title: 'Safety Advocate',
+        description: 'Complete safety missions',
+        progress: '4/5'
+    },
+    {
+        id: 2,
+        icon: '🏆',
+        title: 'Community Builder',
+        description: 'Engage 700 more members',
+        progress: '300/1000'
     }
+];
 
-    // Fill form fields
-    document.getElementById('fullName').value = user.full_name || '';
-    document.getElementById('username').value = user.username || '';
-    document.getElementById('email').value = user.email || '';
-    document.getElementById('phone').value = user.phone_number || '';
-    document.getElementById('bio').value = user.bio || '';
+function renderAchievements() {
+    const container = document.getElementById('achievementsList');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    achievementsData.forEach(achievement => {
+        const card = document.createElement('div');
+        card.className = 'achievement-card';
+        card.innerHTML = `
+            <div class="achievement-icon">${achievement.icon}</div>
+            <div class="achievement-info">
+                <div class="achievement-title">${achievement.title}</div>
+                <div class="achievement-description">${achievement.description}</div>
+            </div>
+            <div class="achievement-progress">${achievement.progress}</div>
+        `;
+        container.appendChild(card);
+    });
 }
 
-async function handleProfileUpdate(e) {
-    e.preventDefault();
-    
-    const token = localStorage.getItem('token');
-    const fullName = document.getElementById('fullName').value;
-    const bio = document.getElementById('bio').value;
-    
-    const errorDiv = document.getElementById('profileError');
-    const successDiv = document.getElementById('profileSuccess');
-    
-    errorDiv.classList.remove('show');
-    successDiv.classList.remove('show');
-    
-    try {
-        const response = await fetch(`${API_URL}/api/user/profile`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ fullName, bio })
+// Nearby Connections data
+const nearbyConnectionsData = [
+    {
+        id: 1,
+        name: 'Emily Johnson',
+        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=48&h=48&fit=crop'
+    },
+    {
+        id: 2,
+        name: 'David Brown',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=48&h=48&fit=crop'
+    }
+];
+
+function renderNearbyConnections() {
+    const container = document.getElementById('nearbyConnections');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    nearbyConnectionsData.forEach(connection => {
+        const item = document.createElement('div');
+        item.className = 'connection-item';
+        item.innerHTML = `
+            <img src="${connection.avatar}" alt="${connection.name}" class="connection-avatar">
+            <div class="connection-info">
+                <div class="connection-name">${connection.name}</div>
+            </div>
+            <div class="connection-actions">
+                <button class="connection-action-btn" data-action="add" data-id="${connection.id}" title="Add friend">👤+</button>
+                <button class="connection-action-btn" data-action="remove" data-id="${connection.id}" title="Remove">👤-</button>
+            </div>
+        `;
+
+        item.querySelectorAll('.connection-action-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const action = btn.getAttribute('data-action');
+                const id = btn.getAttribute('data-id');
+                handleConnectionAction(id, action, connection.name);
+            });
         });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            // Update displayed name
-            document.getElementById('profileName').textContent = data.user.full_name;
-            
-            // Update avatar initials
-            const initials = data.user.full_name.charAt(0).toUpperCase();
-            document.getElementById('avatarInitials').textContent = initials;
-            
-            successDiv.textContent = 'Profile updated successfully!';
-            successDiv.classList.add('show');
-            
-            // Hide success message after 3 seconds
-            setTimeout(() => {
-                successDiv.classList.remove('show');
-            }, 3000);
-        } else {
-            errorDiv.textContent = data.error || 'Failed to update profile';
-            errorDiv.classList.add('show');
-        }
-    } catch (error) {
-        console.error('Error updating profile:', error);
-        errorDiv.textContent = 'Network error. Please try again.';
-        errorDiv.classList.add('show');
+
+        container.appendChild(item);
+    });
+}
+
+function handleConnectionAction(id, action, name) {
+    if (action === 'add') {
+        alert(`Demo: Adding ${name} as a friend`);
+    } else if (action === 'remove') {
+        alert(`Demo: Removing ${name} from connections`);
     }
 }
 
-function handleLogout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
+// Community data
+const communityData = [
+    {
+        id: 1,
+        name: 'Michael Lee',
+        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=48&h=48&fit=crop'
+    },
+    {
+        id: 2,
+        name: 'Sophia Kim',
+        avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=48&h=48&fit=crop'
+    }
+];
+
+function renderCommunity() {
+    const container = document.getElementById('communityList');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    communityData.forEach(member => {
+        const item = document.createElement('div');
+        item.className = 'community-item';
+        item.innerHTML = `
+            <img src="${member.avatar}" alt="${member.name}" class="community-avatar">
+            <div class="community-info">
+                <div class="community-name">${member.name}</div>
+            </div>
+            <button class="community-profile-btn" data-id="${member.id}">My Profile</button>
+        `;
+
+        item.querySelector('.community-profile-btn').addEventListener('click', () => {
+            alert(`Demo: Viewing ${member.name}'s profile`);
+        });
+
+        container.appendChild(item);
+    });
 }
 
-function showMessage(message, type) {
-    const div = document.createElement('div');
-    div.className = `${type}-message show`;
-    div.textContent = message;
-    div.style.position = 'fixed';
-    div.style.top = '20px';
-    div.style.right = '20px';
-    div.style.padding = '1rem 1.5rem';
-    div.style.borderRadius = '8px';
-    div.style.zIndex = '1000';
-    div.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-    
-    document.body.appendChild(div);
-    
-    setTimeout(() => {
-        div.remove();
-    }, 3000);
+function setupFriendsActions() {
+    const findFriendsBtn = document.querySelector('.friends-btn-secondary');
+    const inviteFriendsBtn = document.querySelector('.friends-btn-primary');
+    const seeAllBtns = document.querySelectorAll('.see-all-btn');
+
+    if (findFriendsBtn) {
+        findFriendsBtn.addEventListener('click', () => {
+            alert('Demo: Finding friends nearby');
+        });
+    }
+
+    if (inviteFriendsBtn) {
+        inviteFriendsBtn.addEventListener('click', () => {
+            alert('Demo: Inviting friends to join NightGuard');
+        });
+    }
+
+    seeAllBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            alert('Demo: Showing all connections/community members');
+        });
+    });
 }

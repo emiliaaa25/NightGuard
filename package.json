@@ -20,15 +20,15 @@
     "nodemon": "^3.1.11"
   },
   "repository": {
-    "type": "git",
-    "url": "git+https://github.com/emiliaaa25/NightSafe.git"
+  "type": "git",
+  "url": "git+https://github.com/emiliaaa25/NightGuard.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/emiliaaa25/NightSafe/issues"
+  "url": "https://github.com/emiliaaa25/NightGuard/issues"
   },
-  "homepage": "https://github.com/emiliaaa25/NightSafe#readme"
+  "homepage": "https://github.com/emiliaaa25/NightGuard#readme"
 }

@@ -34,6 +34,14 @@ app.get('/profile', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/profile.html'));
 });
 
+app.get('/discover', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/discover.html'));
+});
+
+app.get('/notifications', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/notifications.html'));
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server funcționează' });

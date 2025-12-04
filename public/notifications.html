@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications - NightGuard Community</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/notifications.css">
+</head>
+<body class="dashboard-body">
+    <div class="notifications-shell">
+        <!-- Left Sidebar -->
+        <aside class="notifications-sidebar">
+            <div class="sidebar-header">
+                <h1 class="sidebar-title">Community</h1>
+            </div>
+
+            <nav class="notifications-nav">
+                <a href="/" class="nav-item">
+                    <span class="nav-icon">🏠</span>
+                    <span>Home</span>
+                </a>
+                
+                <div class="nav-item nav-item-expandable">
+                    <div class="nav-item-header">
+                        <span class="nav-icon">🛡️</span>
+                        <span>Safety</span>
+                        <span class="nav-caret">▲</span>
+                    </div>
+                    <div class="nav-submenu">
+                        <a href="#" class="nav-subitem">Overview</a>
+                        <a href="#" class="nav-subitem">Connect</a>
+                        <a href="#" class="nav-subitem">Alerts</a>
+                        <a href="#" class="nav-subitem">Share Location</a>
+                    </div>
+                </div>
+
+                <div class="nav-item nav-item-expandable nav-item-active">
+                    <div class="nav-item-header">
+                        <span class="nav-icon">👥</span>
+                        <span>Travel Together</span>
+                        <span class="nav-caret">▲</span>
+                    </div>
+                    <div class="nav-submenu">
+                        <a href="#" class="nav-subitem">Dashboard</a>
+                        <a href="#" class="nav-subitem">Safety Tips</a>
+                        <a href="/notifications" class="nav-subitem active">Notifications</a>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span class="footer-icon">ℹ️</span>
+                <span>Help & Support</span>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="notifications-main">
+            <!-- Top Navigation Bar -->
+            <header class="notifications-topbar">
+                <div class="topbar-search">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" placeholder="Search Safety Tips" class="search-input">
+                </div>
+                <div class="topbar-actions">
+                    <button class="topbar-btn topbar-btn-primary">Report</button>
+                    <button class="topbar-icon-btn">💬</button>
+                    <button class="topbar-icon-btn topbar-icon-notification">
+                        🔔
+                        <span class="notification-dot"></span>
+                    </button>
+                    <div class="topbar-profile">
+                        <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop" alt="Profile" class="profile-img">
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Grid -->
+            <div class="notifications-content-grid">
+                <!-- Main Content -->
+                <div class="notifications-content">
+                    <h1 class="notifications-heading">Notifications</h1>
+
+                    <!-- New Alerts Section -->
+                    <section class="alerts-section">
+                        <div class="alerts-section-header">
+                            <h2 class="alerts-section-title">New Alerts</h2>
+                            <div class="alerts-filter-dropdown">
+                                <select class="filter-select">
+                                    <option>This week</option>
+                                    <option>This month</option>
+                                    <option>All time</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="alerts-list" id="alertsList">
+                            <!-- Alerts will be rendered by JS -->
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Right Filter Panel -->
+                <aside class="notifications-filter-panel">
+                    <h2 class="filter-panel-title">Filter</h2>
+                    <div class="filter-options">
+                        <label class="filter-option">
+                            <input type="checkbox" class="filter-checkbox" checked>
+                            <span>Safety Alerts</span>
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" class="filter-checkbox" checked>
+                            <span>Location Shares</span>
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" class="filter-checkbox" checked>
+                            <span>Messages</span>
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" class="filter-checkbox" checked>
+                            <span>Community Check-ins</span>
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" class="filter-checkbox" checked>
+                            <span>Emergency Alerts</span>
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" class="filter-checkbox" checked>
+                            <span>User Messages</span>
+                        </label>
+                    </div>
+                    <div class="filter-actions">
+                        <button class="filter-btn" id="selectAllBtn">Select all</button>
+                        <button class="filter-btn" id="unselectAllBtn">Unselect all</button>
+                    </div>
+                </aside>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/notifications.js"></script>
+</body>
+</html>
+
