@@ -2,61 +2,231 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NightGuard - Home</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>NightGuard</title>
+    
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#fdf4ff">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    
+    <link rel="stylesheet" href="./css/style.css">
+    <script src="/socket.io/socket.io.js"></script>
 </head>
-<body class="dashboard-body">
-    <div class="dashboard-shell">
-        <!-- Left Sidebar: Icons Only -->
-        <aside class="dash-sidebar-icons">
-            <button class="sidebar-icon active" data-section="home" title="Home">
-                <span>🏠</span>
-            </button>
-            <button class="sidebar-icon" data-section="safety" title="Safety">
-                <span>🛡️</span>
-            </button>
-            <a href="/discover" class="sidebar-icon" data-section="community" title="Community">
-                <span>🐾</span>
-            </a>
-            <button class="sidebar-icon" data-section="alerts" title="Alerts">
-                <span>⚠️</span>
-            </button>
+<body>
+
+    <div id="start-overlay" class="fullscreen-overlay" style="background: #fdf4ff; z-index: 9999; justify-content: center; align-items: center; display: flex;">
+        <div style="text-align: center;">
+            <div class="loader-ring mb-4"></div>
+            <h1 style="font-size: 24px; font-weight: 800; color: #1f2937;">NightGuard</h1>
+            <p style="color: #6b7280; margin-bottom: 30px;">Tap to activate sensors</p>
+            <button id="btn-start-app" class="btn-primary">START APP</button>
+        </div>
+    </div>
+
+    <div id="landing-view" class="auth-container">
+        <div class="auth-card glass-panel">
+            <div class="auth-header text-center mb-4">
+                <i class="ph-fill ph-shield-check logo-glow"></i>
+                <h1>NightGuard</h1>
+                <p>Safety Companion</p>
+            </div>
+
+            <div id="loginSection">
+                <form id="loginForm">
+                    <div class="input-group">
+                        <i class="ph ph-envelope-simple"></i>
+                        <input type="email" id="loginEmail" placeholder="Email" required>
+                    </div>
+                    <div class="input-group">
+                        <i class="ph ph-lock-key"></i>
+                        <input type="password" id="loginPassword" placeholder="Password" required>
+                    </div>
+                    <button class="btn-primary w-100 mt-2">LOGIN</button>
+                </form>
+                <div class="auth-footer mt-4 text-center">
+                    <span class="text-muted">No account?</span> 
+                    <button id="showRegister" class="text-link">Register Now</button>
+                </div>
+            </div>
+
+            <div id="registerSection" class="hidden">
+                <form id="registerForm">
+                    <div class="input-group"><i class="ph ph-user"></i><input type="text" id="registerFullName" placeholder="Full Name" required></div>
+                    <div class="input-group"><i class="ph ph-envelope-simple"></i><input type="email" id="registerEmail" placeholder="Email" required></div>
+                    <div class="input-group"><i class="ph ph-identification-card"></i><input type="text" id="registerUsername" placeholder="Username" required></div>
+                    <div class="input-group"><i class="ph ph-lock-key"></i><input type="password" id="registerPassword" placeholder="Password" required></div>
+                    <div class="input-group"><i class="ph ph-lock-key"></i><input type="password" id="registerConfirmPassword" placeholder="Confirm Password" required></div>
+                    <button class="btn-primary w-100 mt-2">CREATE ACCOUNT</button>
+                </form>
+                <div class="auth-footer mt-4 text-center">
+                    <span class="text-muted">Have an account?</span> 
+                    <button id="showLogin" class="text-link">Back to Login</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboard-view" class="app-wrapper hidden">
+        
+        <aside class="sidebar desktop-only glass-panel">
+            <div class="brand">
+                <i class="ph-fill ph-shield-check text-primary"></i> 
+                <span>NIGHTGUARD</span>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-item active"><i class="ph ph-grid-four"></i> Dashboard</button>
+                <button onclick="openCommunityMap()" class="nav-item"><i class="ph ph-map-trifold"></i> Live Map</button>
+                <button onclick="openHistoryModal()" class="nav-item"><i class="ph ph-clock-counter-clockwise"></i> History</button>
+                
+                <div id="admin-link-wrapper" class="hidden">
+                    <div class="nav-divider">ADMIN</div>
+                    <button onclick="document.getElementById('admin-panel').scrollIntoView()" class="nav-item"><i class="ph ph-users-three"></i> Applicants</button>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="nav-item logout"><i class="ph ph-sign-out"></i> Log Out</button>
+            </div>
         </aside>
 
-        <!-- Main Content Area -->
-        <main class="dash-main-content">
-            <!-- Community Safety Section -->
-            <section class="content-section">
-                <h2 class="section-heading">Community Safety</h2>
-                <div class="safety-cards-grid" id="communitySafetyCards">
-                    <!-- Cards will be rendered by JS -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div>
+                    <h2 id="welcomeTitle">Hello</h2>
+                    <div id="guardianStatusText" class="status-indicator"><span class="dot online"></span> System Active</div>
                 </div>
-            </section>
+                <button id="logoutBtnMobile" class="icon-btn mobile-only"><i class="ph ph-sign-out"></i></button>
+                <div class="desktop-only"><div id="guardian-controls-container"></div></div>
+            </header>
 
-            <!-- Safety Features Section -->
-            <section class="content-section">
-                <h2 class="section-heading">Safety Features</h2>
-                <div class="safety-features-grid" id="safetyFeatures">
-                    <!-- Features will be rendered by JS -->
+            <div id="guardian-controls-mobile" class="mobile-only mb-4"></div>
+
+            <div class="content-grid">
+                <div class="grid-card panic-card" onclick="nightGuardIoT.triggerPanicMode('BUTTON_PRESS')">
+                    <div class="panic-bg-effect"></div>
+                    <div class="panic-content">
+                        <div class="panic-icon-lg"><i class="ph-fill ph-warning-octagon"></i></div>
+                        <div>
+                            <h3>SOS ALERT</h3>
+                            <p>Tap button or shake device</p>
+                        </div>
+                    </div>
+                    <div id="btn-panic" class="status-pill">STANDBY</div>
                 </div>
-            </section>
 
-            <!-- My Alerts Section -->
-            <section class="content-section">
-                <h2 class="section-heading">My Alerts</h2>
-                <div class="alerts-cards-grid" id="myAlertsCards">
-                    <!-- Alert cards will be rendered by JS -->
+                <div class="grid-card glass-panel">
+                    <div class="card-header"><i class="ph ph-radar text-primary"></i><h3>Nearby Guardians</h3></div>
+                    <div id="communityContainer" class="scroller-y">
+                        <div class="empty-state">
+                            <i class="ph ph-scan"></i>
+                            <p>Scanning area...</p>
+                        </div>
+                    </div>
                 </div>
-            </section>
 
-            <!-- Explore Button -->
-            <div class="explore-section">
-                <button class="explore-button">Explore</button>
+                <div id="admin-panel" class="grid-card glass-panel full-width hidden">
+                    <div class="card-header"><i class="ph ph-files"></i><h3>Pending Approvals</h3></div>
+                    <div id="applicants-list"></div>
+                </div>
+                
+                <div id="application-panel" class="grid-card glass-panel hidden">
+                    <div class="card-header"><i class="ph ph-certificate"></i><h3>Become a Guardian</h3></div>
+                    <button id="btn-apply" onclick="openApplyModal()" class="btn-outline">Apply Now</button>
+                    <p id="app-status" class="hidden text-warning mt-2">Verification Pending</p>
+                </div>
             </div>
         </main>
     </div>
 
-    <script src="/js/main.js"></script>
+    <nav id="bottom-nav" class="bottom-nav mobile-only hidden">
+        <button class="nav-link active"><i class="ph ph-grid-four"></i><span>Home</span></button>
+        <button onclick="openCommunityMap()" class="nav-link"><i class="ph ph-map-trifold"></i><span>Map</span></button>
+        <button onclick="openHistoryModal()" class="nav-link"><i class="ph ph-clock-counter-clockwise"></i><span>Logs</span></button>
+    </nav>
+
+    <div id="map-overlay" class="fullscreen-overlay hidden">
+        <div class="overlay-top">
+            <h3 id="map-title">Navigation</h3>
+            <button onclick="closeMap()" class="btn-icon"><i class="ph ph-x"></i></button>
+        </div>
+        <div id="route-controls" class="map-bar">
+            <div class="search-box"><i class="ph ph-navigation-arrow"></i> <input type="text" id="route-start" readonly placeholder="My Location"></div>
+            <div class="search-box"><i class="ph ph-flag"></i> <input type="text" id="route-dest" placeholder="Where to?"></div>
+            <div id="route-status" class="status-text">Tap map to set destination</div>
+        </div>
+        <div id="map"></div>
+        <div class="overlay-bottom">
+            <button onclick="reportCurrentLocationHazard()" class="btn-warning w-100">REPORT HAZARD</button>
+        </div>
+    </div>
+
+    <div id="modal-history" class="modal-backdrop hidden">
+        <div class="modal-window">
+            <div class="modal-header"><h3>Security Logs</h3><button onclick="document.getElementById('modal-history').classList.add('hidden')" class="btn-text"><i class="ph ph-x"></i></button></div>
+            <div id="history-list" class="modal-content-scroll"></div>
+        </div>
+    </div>
+
+    <div id="modal-apply" class="modal-backdrop hidden">
+        <div class="modal-window">
+            <div class="modal-header"><h3>Guardian Application</h3><button onclick="closeModal('modal-apply')" class="btn-text"><i class="ph ph-x"></i></button></div>
+            <form id="form-apply" class="p-4" style="padding: 24px;">
+                <input type="text" id="app-phone" placeholder="Phone Number" class="input-glass mb-2" required>
+                <input type="text" id="app-idcard" placeholder="ID / Badge Number" class="input-glass mb-2" required>
+                <textarea id="app-reason" placeholder="Why do you want to join?" class="input-glass mb-2" style="min-height: 80px;"></textarea>
+                <textarea id="app-exp" placeholder="Relevant Experience" class="input-glass mb-4" style="min-height: 80px;"></textarea>
+                <button class="btn-primary w-100">SUBMIT APPLICATION</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="guardian-alert-modal" class="fullscreen-alert hidden" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(12px);">
+        <div style="background: white; border-radius: 32px; padding: 32px 24px; width: 90%; max-width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; position: relative;">
+            
+            <div style="position: absolute; top: -40px; left: 50%; transform: translateX(-50%); width: 150px; height: 150px; background: radial-gradient(circle, rgba(236, 72, 153, 0.3) 0%, transparent 70%); pointer-events: none;"></div>
+
+            <div style="position: relative; margin-bottom: 20px;">
+                <div class="pulse-ring" style="border-color: #ec4899;"></div>
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #ec4899, #be185d); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 10px 20px rgba(236, 72, 153, 0.4);">
+                    <i class="ph-fill ph-warning-octagon" style="font-size: 40px; color: white;"></i>
+                </div>
+            </div>
+
+            <h2 style="font-size: 22px; font-weight: 900; color: #1f2937; margin-bottom: 4px; letter-spacing: -0.5px;">SOS ALERT</h2>
+            <p style="color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 24px;">Incoming Distress Signal</p>
+            
+            <div style="background: #fdf2f8; border-radius: 20px; padding: 20px; margin-bottom: 24px; border: 1px solid #fbcfe8;">
+                <div style="font-size: 18px; font-weight: 800; color: #be185d; margin-bottom: 6px;" id="alert-victim-name">Unknown User</div>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 6px; color: #db2777; font-size: 13px; font-weight: 600;">
+                    <i class="ph-fill ph-map-pin"></i>
+                    <span id="alert-distance">Tracking location...</span>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 12px;">
+                <button onclick="ignoreAlert()" style="background: white; border: 2px solid #e5e7eb; color: #6b7280; padding: 16px; border-radius: 18px; font-weight: 700; font-size: 13px; cursor: pointer;">
+                    IGNORE
+                </button>
+                <button onclick="acceptAlert()" style="background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; padding: 16px; border-radius: 18px; font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    RESPOND <i class="ph-bold ph-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <audio id="siren-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <script src="./js/iot-sensors.js"></script>
+    <script src="./js/auth.js"></script>
+    <script src="./js/map.js"></script>
+    <script src="./js/guardian.js"></script>
+    <script src="./js/history.js"></script>
+    <script src="./js/socket-client.js"></script>
+    <script src="./js/main.js"></script>
 </body>
 </html>

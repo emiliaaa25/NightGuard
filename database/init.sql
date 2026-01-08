@@ -26,14 +26,24 @@ $$ language 'plpgsql';
 
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TABLE IF NOT EXISTS alerts (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    type VARCHAR(50) NOT NULL,           -- 'SOS', 'PANIC'
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    status VARCHAR(20) DEFAULT 'ACTIVE',
+    source VARCHAR(50) DEFAULT 'USER',   -- 'USER_APP'
+    trigger_method VARCHAR(50),          -- 'BUTTON', 'SHAKE'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
--- Date de test (opțional)
--- Parola este: test123
-INSERT INTO users (username, email, password, full_name, bio) 
-VALUES (
-    'testuser', 
-    'test@example.com', 
-    '$2a$10$8K1p/a0dL3LcrmtSYN0X5OvZdVlX6xHqo1KpJLMQ9ZQ7QJGxqHAWa',
-    'Utilizator Test',
-    'Aceasta este o biografie de test'
-) ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS safety_reports (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    type VARCHAR(50), -- 'BROKEN_LIGHT', 'DANGEROUS_CROWD', 'SUSPICIOUS'
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
