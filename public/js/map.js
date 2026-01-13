@@ -1,225 +1,382 @@
-// === DUAL MAP SYSTEM: SAFETY vs RESCUE ===
+// === MAPLIBRE GL JS (CLICK & ROUTING FIX) ===
+
+// PUNE CHEIA AICI
+const API_KEY = '7GsswGN4WfdFNk3pJAeV'; 
 
 window.map = null;
-window.routingControl = null;
-window.safetyLayer = null;
-
-// Markere Globale
-let myLocationMarker = null;
+let guardianMarker = null;
 let targetMarker = null;
-let hazardsData = [];
+let destinationMarker = null; // Marker nou pentru destinația aleasă
 
-// --- 1. CONFIGURARE GENERALĂ (Iconițe & Stil) ---
-const ICONS = {
-    // Iconiță Gardian (Tu)
-    guardian: L.divIcon({
-        className: 'guardian-marker',
-        html: `<div style="width:20px; height:20px; background:#3b82f6; border:3px solid white; border-radius:50%; box-shadow:0 4px 10px rgba(0,0,0,0.3);"></div>`,
-        iconSize: [20, 20], iconAnchor: [10, 10]
-    }),
-    // Iconiță Victimă (Pulsatila)
-    victim: L.divIcon({
-        className: 'victim-marker',
-        html: `<div style="width:24px; height:24px; background:#ef4444; border:4px solid white; border-radius:50%; animation:pulse-ring-emergency 1.5s infinite;"></div>`,
-        iconSize: [24, 24], iconAnchor: [12, 12]
-    }),
-    // Iconiță Pericol
-    hazard: L.divIcon({
-        className: 'hazard-icon',
-        html: `<i class="ph-fill ph-warning-octagon" style="color:#ef4444; font-size:24px;"></i>`,
-        iconSize: [24, 24], iconAnchor: [12, 12]
-    })
-};
+const STYLE_DARK = `https://api.maptiler.com/maps/ch-swisstopo-lbm-dark/style.json?key=${API_KEY}`; 
+const STYLE_SAT = `https://api.maptiler.com/maps/satellite/style.json?key=${API_KEY}`;
 
-// --- FUNCȚIE UTILITARĂ: CURĂȚĂ HARTA VECHE ---
-function resetMapState() {
+// --- RESETARE ---
+function resetMapGlobals() {
     if (window.map) {
-        window.map.remove(); // Distruge instanța veche complet
+        window.map.remove();
         window.map = null;
     }
-    window.routingControl = null;
-    window.safetyLayer = null;
-    myLocationMarker = null;
+    guardianMarker = null;
     targetMarker = null;
+    destinationMarker = null;
+    console.log("🧹 Map cleaned.");
 }
 
-// =========================================================
-// MODUL 1: SAFETY MAP (Explorare & Rute Sigure)
-// =========================================================
+// 1. SAFETY MAP (Aici facem setarea destinației)
 window.openCommunityMap = function() {
-    // 1. Pregătim UI-ul
-    const mapOverlay = document.getElementById('map-overlay');
-    const title = document.getElementById('map-title');
-    const controls = document.getElementById('route-controls');
+    setupUI('Safe Navigation');
     
-    // UI specific pentru Safety Map
-    mapOverlay.classList.remove('hidden');
-    mapOverlay.style.display = 'flex';
-    controls.classList.remove('hidden'); // ARATĂ bara de căutare
-    controls.style.display = 'flex';
-    
-    if(title) {
-        title.innerText = "Safe Navigation";
-        title.style.color = "#1f2937";
-    }
-
-    // 2. Inițializăm Harta
     setTimeout(() => {
-        resetMapState(); // Curățăm orice urmă de Rescue Map
+        resetMapGlobals();
 
-        window.map = L.map('map', { zoomControl: false }).setView([47.1585, 27.6014], 14);
+        window.map = new maplibregl.Map({
+            container: 'map',
+            style: STYLE_DARK, 
+            center: [27.6014, 47.1585], // Iași
+            zoom: 15,
+            pitch: 45,
+            attributionControl: false
+        });
+
+        window.map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+        window.map.on('load', () => {
+            window.map.resize(); 
+            loadHazards();
+            locateUser((lat, lng) => {
+                updateMyMarker(lat, lng);
+                window.map.flyTo({ center: [lng, lat], zoom: 16 });
+            });
+        });
         
-        // Stil: Positron (Curat, Luminos)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19
-        }).addTo(window.map);
 
-        // Layer Pericole
-        window.safetyLayer = L.layerGroup().addTo(window.map);
-        loadHazards();
+        // --- ASCULTĂTORUL DE CLICK (CRITIC) ---
+        window.map.on('click', (e) => {
+            const clickedLat = e.lngLat.lat;
+            const clickedLng = e.lngLat.lng;
 
-        // Locația mea
-        locateUser((lat, lng) => {
-            myLocationMarker = L.marker([lat, lng], { icon: ICONS.guardian }).addTo(window.map);
-            window.map.setView([lat, lng], 15);
-        });
+            console.log("🖱️ Map Clicked:", clickedLat, clickedLng);
 
-        // Eveniment: Click pentru a pune pin
-        window.map.on('click', function(e) {
-            calculateSafeRoute(e.latlng.lat, e.latlng.lng);
-        });
+            // Verificăm dacă știm unde suntem noi (punctul de start)
+            if (!window.userLat || !window.userLng) {
+                alert("Waiting for your GPS location...");
+                locateUser((lat, lng) => updateMyMarker(lat, lng));
+                return;
+            }
 
-    }, 300);
-}
+            // Dacă suntem în modul de setare Escortă sau doar explorăm
+            if (!window.isEscortActive) {
+                // 1. Punem un pin unde am dat click
+                updateDestinationMarker(clickedLat, clickedLng);
 
-// Logica de rutare Safe (Evită pericole)
-function calculateSafeRoute(destLat, destLng) {
-    if(!window.userLat) { alert("Waiting for GPS..."); return; }
-
-    if(targetMarker) window.map.removeLayer(targetMarker);
-    targetMarker = L.marker([destLat, destLng]).addTo(window.map);
-
-    if(window.routingControl) window.map.removeControl(window.routingControl);
-
-    window.routingControl = L.Routing.control({
-        waypoints: [ L.latLng(window.userLat, window.userLng), L.latLng(destLat, destLng) ],
-        router: L.Routing.osrmv1({ profile: 'foot' }), // Pieton
-        lineOptions: { styles: [{color: '#3b82f6', weight: 5}] }, // Albastru
-        createMarker: () => null,
-        addWaypoints: false
-    }).addTo(window.map);
-}
-
-// =========================================================
-// MODUL 2: RESCUE MAP (Urgență, Gardian -> Victima)
-// =========================================================
-window.startRescueMission = function(victimLat, victimLng) {
-    // 1. Pregătim UI-ul
-    const mapOverlay = document.getElementById('map-overlay');
-    const title = document.getElementById('map-title');
-    const controls = document.getElementById('route-controls');
-    const statusDiv = document.getElementById('route-status');
-
-    // UI specific pentru Rescue Map
-    mapOverlay.classList.remove('hidden');
-    mapOverlay.style.display = 'flex';
-    controls.classList.add('hidden'); // ASCUNDE bara de căutare
-    controls.style.display = 'none';
-
-    if(title) {
-        title.innerHTML = "🚨 RESCUE MISSION";
-        title.style.color = "#ef4444";
-    }
-
-    // 2. Inițializăm Harta
-    setTimeout(() => {
-        resetMapState(); // Curățăm orice urmă de Safety Map
-
-        window.map = L.map('map', { zoomControl: false }).setView([victimLat, victimLng], 15);
-        
-        // Stil: Voyager (Mai detaliat, bun pentru condus/orientare rapidă)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19
-        }).addTo(window.map);
-
-        // Marker Victimă (Roșu Pulsatil)
-        targetMarker = L.marker([victimLat, victimLng], { icon: ICONS.victim }).addTo(window.map);
-            
-        // Locația mea și Ruta de Intercepție
-        locateUser((myLat, myLng) => {
-            myLocationMarker = L.marker([myLat, myLng], { icon: ICONS.guardian }).addTo(window.map);
-            
-            // Trasează linia roșie directă
-            drawRescueRoute(myLat, myLng, victimLat, victimLng);
-
-            // Update Buton GPS
-            setupGoogleMapsButton(myLat, myLng, victimLat, victimLng);
-        });
-
-    }, 300);
-}
-
-// Logica de rutare Rescue (Cea mai rapidă)
-function drawRescueRoute(startLat, startLng, endLat, endLng) {
-    if(window.routingControl) window.map.removeControl(window.routingControl);
-
-    window.routingControl = L.Routing.control({
-        waypoints: [ L.latLng(startLat, startLng), L.latLng(endLat, endLng) ],
-        router: L.Routing.osrmv1({ profile: 'driving' }), // Auto/Viteză
-        lineOptions: { styles: [{color: '#ef4444', weight: 6, opacity: 0.8}] }, // Roșu Urgență
-        createMarker: () => null,
-        addWaypoints: false,
-        draggableWaypoints: false,
-        show: false
-    }).addTo(window.map);
-}
-
-// =========================================================
-// FUNCȚII COMUNE (Backend & GPS)
-// =========================================================
-
-function locateUser(callback) {
-    if(!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition((pos) => {
-        window.userLat = pos.coords.latitude;
-        window.userLng = pos.coords.longitude;
-        if(callback) callback(window.userLat, window.userLng);
-    }, (err) => console.warn("GPS Error"), {enableHighAccuracy: true});
-}
-
-async function loadHazards() {
-    const token = localStorage.getItem("nightguard_token");
-    try {
-        const res = await fetch('/api/iot/safety-map', { headers: { 'Authorization': `Bearer ${token}` }});
-        const data = await res.json();
-        data.hazards.forEach(h => {
-            if(window.safetyLayer) {
-                L.marker([h.latitude, h.longitude], {icon: ICONS.hazard})
-                 .bindPopup(`<b>${h.type}</b>`)
-                 .addTo(window.safetyLayer);
+                // 2. Calculăm ruta
+                drawRoute(
+                    [window.userLng, window.userLat], 
+                    [clickedLng, clickedLat], 
+                    'walking'
+                );
             }
         });
-    } catch(e) {}
+
+    }, 200);
 }
 
-function setupGoogleMapsButton(startLat, startLng, endLat, endLng) {
-    const btn = document.querySelector('#map-overlay .btn-warning');
-    if(btn) {
-        btn.innerHTML = `<i class="ph-bold ph-arrow-circle-up-right"></i> START GPS NAVIGATION`;
-        btn.onclick = () => {
-            window.open(`https://www.google.com/maps/dir/?api=1&origin=${startLat},${startLng}&destination=${endLat},${endLng}&travelmode=driving`, '_blank');
-        };
+// 2. WATCHER MODE
+window.startWatchingMode = function(targetUserId) {
+    setupUI('LIVE TRACKING', '#ec4899');
+    document.getElementById('route-controls').classList.add('hidden');
+
+    setTimeout(() => {
+        resetMapGlobals();
+        window.map = new maplibregl.Map({
+            container: 'map',
+            style: STYLE_DARK,
+            center: [27.6014, 47.1585], 
+            zoom: 14,
+            pitch: 0,
+            attributionControl: false
+        });
+
+        window.map.on('load', () => window.map.resize());
+
+        if(window.socket) {
+            console.log("👀 JOINING ROOM:", targetUserId);
+            window.socket.emit('join_watch_room', targetUserId);
+
+            window.socket.on('update_target_location', (data) => {
+                const lat = parseFloat(data.lat);
+                const lng = parseFloat(data.lng);
+                
+                if (!window.map) return;
+
+                if (!targetMarker) {
+                    const el = document.createElement('div');
+                    el.className = 'victim-marker'; 
+                    // Stiluri inline backup
+                    el.style.width = '24px'; el.style.height = '24px';
+                    el.style.backgroundColor = '#ef4444'; el.style.borderRadius = '50%';
+                    el.style.border = '4px solid white'; el.style.boxShadow = '0 0 20px #ef4444';
+
+                    targetMarker = new maplibregl.Marker({ element: el })
+                        .setLngLat([lng, lat]) 
+                        .addTo(window.map);
+                } else {
+                    targetMarker.setLngLat([lng, lat]);
+                }
+                
+                window.map.flyTo({ center: [lng, lat], speed: 0.5 });
+            });
+        }
+    }, 200);
+}
+
+// 3. RESCUE MISSION
+window.startRescueMission = function(victimLat, victimLng) {
+    setupUI('🚨 RESCUE MISSION', '#ef4444');
+    document.getElementById('route-controls').classList.add('hidden');
+
+    setTimeout(() => {
+        resetMapGlobals();
+        window.map = new maplibregl.Map({
+            container: 'map',
+            style: STYLE_SAT, 
+            center: [victimLng, victimLat],
+            zoom: 16,
+            pitch: 0
+        });
+
+        window.map.on('load', () => {
+            window.map.resize();
+            
+            // Marker Victimă
+            const el = document.createElement('div');
+            el.style.width = '24px'; el.style.height = '24px';
+            el.style.backgroundColor = 'red'; el.style.borderRadius = '50%'; el.style.border = '4px solid white';
+            
+            targetMarker = new maplibregl.Marker({ element: el })
+                .setLngLat([victimLng, victimLat])
+                .addTo(window.map);
+
+            locateUser((myLat, myLng) => {
+                updateMyMarker(myLat, myLng);
+                drawRoute([myLng, myLat], [victimLng, victimLat], 'driving');
+            });
+        });
+    }, 200);
+}
+
+// --- LOGICA RUTARE (OSRM) ---
+async function drawRoute(start, end, profile) {
+    // start/end sunt [lng, lat]
+    const osrmProfile = profile === 'walking' ? 'foot' : 'car';
+    const url = `https://router.project-osrm.org/route/v1/${osrmProfile}/${start[0]},${start[1]};${end[0]},${end[1]}?overview=full&geometries=geojson`;
+    
+    try {
+        const res = await fetch(url);
+        const json = await res.json();
+        
+        if (!json.routes || json.routes.length === 0) return;
+        
+        const routeData = json.routes[0];
+        const durationSeconds = routeData.duration; // Durata în secunde
+
+        // 1. Desenăm linia pe hartă
+        if (window.map.getSource('route')) {
+            window.map.getSource('route').setData(routeData.geometry);
+        } else {
+            window.map.addSource('route', {
+                'type': 'geojson',
+                'data': { 'type': 'Feature', 'properties': {}, 'geometry': routeData.geometry }
+            });
+            window.map.addLayer({
+                'id': 'route',
+                'type': 'line',
+                'source': 'route',
+                'layout': { 'line-join': 'round', 'line-cap': 'round' },
+                'paint': {
+                    'line-color': profile === 'walking' ? '#3b82f6' : '#ef4444',
+                    'line-width': 6,
+                    'line-opacity': 0.8
+                }
+            });
+        }
+
+        // 2. IMPORTANT: Trimitem datele înapoi la Escort UI
+        // Verificăm dacă suntem în modul de setare (flag-ul din escort.js)
+        if (window.isEscortSetupMode && window.virtualEscort) {
+            console.log("✅ Sending estimates to Escort Module:", durationSeconds);
+            window.virtualEscort.updateEstimates(durationSeconds, { lat: end[1], lng: end[0] });
+        }
+
+    } catch (e) { console.error("Routing error:", e); }
+}
+
+// --- HELPERS ---
+
+function updateMyMarker(lat, lng) {
+    window.userLat = lat;
+    window.userLng = lng;
+    
+    if (!guardianMarker) {
+        const el = document.createElement('div');
+        el.className = 'guardian-marker';
+        el.style.width = '20px'; el.style.height = '20px';
+        el.style.backgroundColor = '#3b82f6'; 
+        el.style.borderRadius = '50%'; el.style.border = '3px solid white';
+        
+        guardianMarker = new maplibregl.Marker({ element: el })
+            .setLngLat([lng, lat])
+            .addTo(window.map);
+    } else {
+        guardianMarker.setLngLat([lng, lat]);
     }
 }
 
-// Buton de report (funcționează doar pe Safety Map teoretic, dar e global)
-window.reportCurrentLocationHazard = function() {
-    const type = prompt("REPORT: ACCIDENT, DARK, CROWD");
-    if(!type) return;
-    locateUser((lat, lng) => {
-         // (Codul de fetch rămâne la fel ca înainte)
-         alert("Hazard reported!");
+// Funcție nouă pentru a pune un pin unde dai click
+function updateDestinationMarker(lat, lng) {
+    if (!destinationMarker) {
+        const el = document.createElement('div');
+        el.innerHTML = '<i class="ph-fill ph-flag-checkered" style="color:#ec4899; font-size:24px;"></i>';
+        destinationMarker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+            .setLngLat([lng, lat])
+            .addTo(window.map);
+    } else {
+        destinationMarker.setLngLat([lng, lat]);
+    }
+}
+
+function setupUI(text, color) {
+    const overlay = document.getElementById('map-overlay');
+    overlay.classList.remove('hidden');
+    overlay.style.display = 'flex';
+    document.getElementById('route-controls').classList.remove('hidden');
+    const t = document.getElementById('map-title');
+    if(t) { t.innerHTML = text; if(color) t.style.color = color; }
+}
+
+function locateUser(cb) {
+    if(!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(pos => {
+        window.userLat = pos.coords.latitude;
+        window.userLng = pos.coords.longitude;
+        cb(window.userLat, window.userLng);
     });
 }
 
-window.closeMap = function() { document.getElementById('map-overlay').style.display = 'none'; }
+window.closeMap = function() { 
+    document.getElementById('map-overlay').style.display = 'none';
+    if(window.location.search.includes('watch') || document.getElementById('map-title').innerText.includes("LIVE")) {
+        window.location.reload();
+    }
+}
+
+// ==========================================
+// 4. HAZARD REPORTING (LIPSEA)
+// ==========================================
+// ==========================================
+// 4. HAZARD REPORTING (FINAL)
+// ==========================================
+
+window.reportCurrentLocationHazard = async function() {
+    // 1. Verificăm locația
+    if (!window.userLat || !window.userLng) {
+        alert("Waiting for GPS...");
+        locateUser((lat, lng) => {
+            window.userLat = lat;
+            window.userLng = lng;
+        });
+        return;
+    }
+
+    // 2. Userul alege tipul
+    const type = prompt("REPORT HAZARD:\nType one: DARK, ACCIDENT, CROWD, ANIMAL");
+    if (!type) return; 
+
+    const validTypes = ['DARK', 'ACCIDENT', 'CROWD', 'ANIMAL', 'ICE', 'OTHER'];
+    const finalType = type.toUpperCase(); // Facem textul mare automat
+
+    // 3. Adăugăm vizual pe hartă (Instant Feedback)
+    const el = document.createElement('div');
+    el.innerHTML = '<i class="ph-fill ph-warning-octagon" style="color:#f59e0b; font-size:24px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);"></i>';
+    
+    new maplibregl.Marker({ element: el })
+        .setLngLat([window.userLng, window.userLat])
+        .setPopup(new maplibregl.Popup().setHTML(`<b>${finalType}</b><br>Just reported`))
+        .addTo(window.map);
+
+    // 4. TRIMITEM LA SERVER (Aceasta parte lipsea/era comentată)
+    const token = localStorage.getItem("nightguard_token");
+    
+    try {
+        const response = await fetch('/api/iot/report', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // Critic: trebuie să fim logați
+            },
+            body: JSON.stringify({
+                type: finalType,
+                description: "User reported via Live Map",
+                latitude: window.userLat,
+                longitude: window.userLng
+            })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log("✅ Hazard saved to DB:", result);
+            alert(`Hazard "${finalType}" reported successfully!`);
+        } else {
+            console.error("❌ Failed to save:", result);
+            alert("Error saving report. Check console.");
+        }
+
+    } catch(e) { 
+        console.error("❌ Network Error:", e); 
+        alert("Server connection failed.");
+    }
+};
+
+// Funcție pentru a încărca pericolele existente
+async function loadHazards() {
+    const token = localStorage.getItem("nightguard_token");
+    console.log("🔄 Loading hazards from DB..."); // Debug
+
+    try {
+        const res = await fetch('/api/iot/safety-map', { headers: { 'Authorization': `Bearer ${token}` }});
+        const data = await res.json();
+        
+        console.log("📦 Hazards Received:", data.hazards); // Vezi aici dacă primești datele
+
+        if(data.hazards && window.map) {
+            data.hazards.forEach(h => {
+                // 1. Creăm elementul vizual
+                const el = document.createElement('div');
+                el.className = 'hazard-marker'; // Folosim o clasă CSS
+                el.innerHTML = '<i class="ph-fill ph-warning-octagon" style="color:#f59e0b; font-size:24px;"></i>';
+                el.style.width = '24px';
+                el.style.height = '24px';
+                el.style.cursor = 'pointer';
+
+                // 2. CONVERTIM COORDONATELE (Critic!)
+                const lat = parseFloat(h.latitude);
+                const lng = parseFloat(h.longitude);
+
+                // 3. Adăugăm pe hartă
+                new maplibregl.Marker({ element: el })
+                    .setLngLat([lng, lat]) // MapLibre vrea [Lng, Lat]
+                    .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`
+                        <div style="text-align:center;">
+                            <b style="color:#f59e0b">${h.type}</b><br>
+                            <span style="font-size:12px; color:#666;">${h.description || ''}</span>
+                        </div>
+                    `))
+                    .addTo(window.map);
+            });
+        }
+    } catch(e) { 
+        console.error("❌ Error loading hazards:", e); 
+    }
+}

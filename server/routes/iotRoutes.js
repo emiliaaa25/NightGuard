@@ -30,6 +30,6 @@ const upload = multer({ storage: storage });
 router.post('/panic', authMiddleware, iotController.handlePanicAlert);
 router.post('/upload-evidence', authMiddleware, upload.single('audio'), iotController.handleAudioUpload);
 
-router.post('/report-hazard', authMiddleware, iotController.reportHazard);
+router.post('/report', authMiddleware, iotController.reportHazard);
 router.get('/safety-map', authMiddleware, iotController.getSafetyMapData);
 module.exports = router;

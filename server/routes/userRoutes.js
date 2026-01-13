@@ -24,5 +24,12 @@ router.post('/approve', authMiddleware, userController.approveGuardian);
 router.post('/reject', authMiddleware, userController.rejectGuardian);
 
 router.get('/history', authMiddleware, userController.getAlertHistory);
+router.get('/contacts', authMiddleware, userController.getContacts); 
+
+// 2. ADD Contact
+router.post('/contacts', authMiddleware, userController.addContact);
+
+// 3. DELETE Contact
+router.delete('/contacts/:id', authMiddleware, userController.deleteContact);
 
 module.exports = router;

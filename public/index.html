@@ -11,8 +11,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
     
     <link rel="stylesheet" href="./css/style.css">
     <script src="/socket.io/socket.io.js"></script>
@@ -58,6 +58,7 @@
                 <form id="registerForm">
                     <div class="input-group"><i class="ph ph-user"></i><input type="text" id="registerFullName" placeholder="Full Name" required></div>
                     <div class="input-group"><i class="ph ph-envelope-simple"></i><input type="email" id="registerEmail" placeholder="Email" required></div>
+                    <div class="input-group"><i class="ph ph-envelope-simple"></i><input type="tel" id="registerPhone" placeholder="Phone" required></div>
                     <div class="input-group"><i class="ph ph-identification-card"></i><input type="text" id="registerUsername" placeholder="Username" required></div>
                     <div class="input-group"><i class="ph ph-lock-key"></i><input type="password" id="registerPassword" placeholder="Password" required></div>
                     <div class="input-group"><i class="ph ph-lock-key"></i><input type="password" id="registerConfirmPassword" placeholder="Confirm Password" required></div>
@@ -79,9 +80,10 @@
                 <span>NIGHTGUARD</span>
             </div>
             <nav class="nav-menu">
-                <button class="nav-item active"><i class="ph ph-grid-four"></i> Dashboard</button>
+                <button onclick="showSection('dashboard')" class="nav-item active" id="nav-dash"><i class="ph ph-grid-four"></i> Dashboard</button>
                 <button onclick="openCommunityMap()" class="nav-item"><i class="ph ph-map-trifold"></i> Live Map</button>
                 <button onclick="openHistoryModal()" class="nav-item"><i class="ph ph-clock-counter-clockwise"></i> History</button>
+                <button onclick="showSection('settings')" class="nav-item" id="nav-settings"><i class="ph ph-gear"></i> Settings</button>
                 
                 <div id="admin-link-wrapper" class="hidden">
                     <div class="nav-divider">ADMIN</div>
@@ -99,13 +101,17 @@
                     <h2 id="welcomeTitle">Hello</h2>
                     <div id="guardianStatusText" class="status-indicator"><span class="dot online"></span> System Active</div>
                 </div>
-                <button id="logoutBtnMobile" class="icon-btn mobile-only"><i class="ph ph-sign-out"></i></button>
+                <div class="flex gap-2">
+                    <button onclick="showSection('settings')" class="icon-btn mobile-only"><i class="ph ph-gear"></i></button>
+                    <button id="logoutBtnMobile" class="icon-btn mobile-only"><i class="ph ph-sign-out"></i></button>
+                </div>
                 <div class="desktop-only"><div id="guardian-controls-container"></div></div>
             </header>
 
             <div id="guardian-controls-mobile" class="mobile-only mb-4"></div>
 
-            <div class="content-grid">
+            <div id="section-dashboard" class="content-grid">
+                
                 <div class="grid-card panic-card" onclick="nightGuardIoT.triggerPanicMode('BUTTON_PRESS')">
                     <div class="panic-bg-effect"></div>
                     <div class="panic-content">
@@ -116,6 +122,82 @@
                         </div>
                     </div>
                     <div id="btn-panic" class="status-pill">STANDBY</div>
+                </div>
+
+                <div class="grid-card glass-panel" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd;">
+                    <div class="card-header" style="border-bottom-color: #bae6fd;">
+                        <i class="ph-fill ph-users-three" style="color: #0284c7;"></i>
+                        <h3 style="color: #0369a1;">Walking Buddy</h3>
+                    </div>
+
+                    <div id="active-walk-container" class="hidden" style="margin-bottom: 15px; background: white; padding: 15px; border-radius: 12px; border-left: 4px solid #0ea5e9; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+    <div style="font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px;">
+        Current Mission
+    </div>
+    <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 15px;">
+        Walking to <span id="active-dest" style="color: #0284c7;">...</span>
+    </div>
+    
+    <div style="display: flex; gap: 10px;">
+        <button id="btn-reopen-chat" class="btn-primary" style="flex: 1; background: #0284c7; font-size: 13px; border: none; padding: 10px; border-radius: 10px; color: white; cursor: pointer;">
+            <i class="ph-bold ph-chats-circle"></i> CHAT
+        </button>
+        
+        <button id="btn-end-walk" class="btn-outline" style="flex: 1; border: 2px solid #10b981; color: #10b981; background: white; font-size: 12px; font-weight: 800; padding: 10px; border-radius: 10px; cursor: pointer;">
+            <i class="ph-bold ph-check"></i> WE MET
+        </button>
+    </div>
+</div>
+
+                    <div id="buddy-list-view">
+                        <p class="text-muted" style="font-size: 13px; margin-bottom: 15px;">
+                            Students walking near you right now:
+                        </p>
+                        <div id="buddy-matches-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto; margin-bottom: 15px;">
+                            <div class="empty-state" style="padding: 10px; font-size: 12px;">
+                                Searching for walkers...
+                            </div>
+                        </div>
+                        <button onclick="showPostRouteForm()" class="btn-primary w-100" style="background: #0284c7; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">
+                            <i class="ph-bold ph-plus"></i> POST MY ROUTE
+                        </button>
+                    </div>
+
+                    <div id="buddy-post-view" class="hidden">
+                        <div class="input-group" style="border-color: #bae6fd;">
+                            <i class="ph ph-map-pin" style="color: #0284c7;"></i>
+                            <input type="text" id="buddy-dest" placeholder="Where are you going? (e.g. Tudor)">
+                        </div>
+                        <div class="input-group" style="border-color: #bae6fd;">
+                            <i class="ph ph-clock" style="color: #0284c7;"></i>
+                            <select id="buddy-time" style="border: none; background: transparent; width: 100%; outline: none; color: #1f2937;">
+                                <option value="0">Leaving Now</option>
+                                <option value="5">In 5 mins</option>
+                                <option value="10">In 10 mins</option>
+                                <option value="15">In 15 mins</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="hidePostRouteForm()" class="btn-outline" style="border-color: #94a3b8; color: #64748b;">Cancel</button>
+                            <button onclick="submitRoute()" class="btn-primary" style="flex: 1; background: #0284c7;">Post</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-card escort-card-premium" onclick="virtualEscort.openSetup()">
+                    <i class="ph-fill ph-person-walking escort-bg-icon"></i>
+                    <div style="position: relative; z-index: 2;">
+                        <div class="card-header">
+                            <i class="ph-fill ph-path" style="color: #ec4899;"></i>
+                            <h3 style="color: #831843;">Virtual Escort</h3>
+                        </div>
+                        <p style="font-size: 13px; color: #6b7280; margin-bottom: 15px; line-height: 1.4;">
+                            Walking alone? Share your route with Trusted Contacts. Auto-alert on timeout.
+                        </p>
+                        <button class="btn-primary w-100" style="background: linear-gradient(135deg, #ec4899, #be185d); border: none; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);">
+                            <i class="ph-bold ph-navigation-arrow"></i> PLAN JOURNEY
+                        </button>
+                    </div>
                 </div>
 
                 <div class="grid-card glass-panel">
@@ -139,13 +221,40 @@
                     <p id="app-status" class="hidden text-warning mt-2">Verification Pending</p>
                 </div>
             </div>
+
+            <div id="section-settings" class="content-grid hidden">
+                <div class="grid-card glass-panel full-width">
+                    <div class="settings-header">
+                        <div class="profile-avatar-large">
+                            <i class="ph-fill ph-user"></i>
+                        </div>
+                        <div>
+                            <h2 style="font-size: 20px; font-weight: 800; color: #1f2937;" id="settings-name">Loading...</h2>
+                            <p style="color: #6b7280; font-size: 14px;" id="settings-email">user@email.com</p>
+                            <span class="status-pill" style="margin-top: 5px; display: inline-block; background: #d1fae5; color: #065f46;">VERIFIED USER</span>
+                        </div>
+                    </div>
+                    
+                    <h3 style="margin-bottom: 15px; font-size: 16px; color: #374151;"><i class="ph-fill ph-users-three text-primary"></i> Trusted Contacts</h3>
+                    <p class="text-muted" style="font-size: 13px; margin-bottom: 20px;">These people will be notified during SOS Alerts and Virtual Escort missions.</p>
+                    
+                    <div id="contacts-list" class="contact-list mb-4">
+                        <div class="empty-state">No contacts added yet.</div>
+                    </div>
+
+                    <button onclick="document.getElementById('modal-add-contact').classList.remove('hidden')" class="btn-outline w-100">
+                        <i class="ph-bold ph-plus"></i> ADD NEW CONTACT
+                    </button>
+                </div>
+            </div>
+
         </main>
     </div>
 
     <nav id="bottom-nav" class="bottom-nav mobile-only hidden">
-        <button class="nav-link active"><i class="ph ph-grid-four"></i><span>Home</span></button>
+        <button onclick="showSection('dashboard')" class="nav-link active" id="mob-nav-dash"><i class="ph ph-grid-four"></i><span>Home</span></button>
         <button onclick="openCommunityMap()" class="nav-link"><i class="ph ph-map-trifold"></i><span>Map</span></button>
-        <button onclick="openHistoryModal()" class="nav-link"><i class="ph ph-clock-counter-clockwise"></i><span>Logs</span></button>
+        <button onclick="showSection('settings')" class="nav-link" id="mob-nav-settings"><i class="ph ph-gear"></i><span>Settings</span></button>
     </nav>
 
     <div id="map-overlay" class="fullscreen-overlay hidden">
@@ -161,6 +270,62 @@
         <div id="map"></div>
         <div class="overlay-bottom">
             <button onclick="reportCurrentLocationHazard()" class="btn-warning w-100">REPORT HAZARD</button>
+        </div>
+    </div>
+
+    <div id="modal-escort-setup" class="modal-backdrop hidden">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h3>Plan Journey</h3>
+                <button onclick="document.getElementById('modal-escort-setup').classList.add('hidden')" class="btn-text"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="p-4">
+                <p class="text-muted mb-4">Select your destination on the map to calculate walking time.</p>
+                <button onclick="virtualEscort.pickDestinationOnMap()" class="btn-secondary w-100 mb-4">
+                    <i class="ph-bold ph-map-pin"></i> SELECT DESTINATION
+                </button>
+                <div id="escort-estimates" class="hidden mb-4" style="background: #fdf2f8; padding: 15px; border-radius: 12px; border: 1px solid #fbcfe8;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span class="text-muted">Estimated Walk:</span>
+                        <strong id="est-time-val">0 min</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; color: #be185d;">
+                        <span>+ Safety Buffer:</span>
+                        <strong>5 min</strong>
+                    </div>
+                    <hr style="border-color: #fbcfe8; margin: 10px 0;">
+                    <div style="display: flex; justify-content: space-between; font-size: 16px;">
+                        <strong>Total Time:</strong>
+                        <strong id="total-time-val" style="color: #be185d;">0 min</strong>
+                    </div>
+                </div>
+                <button id="btn-start-escort" class="btn-primary w-100 hidden" onclick="virtualEscort.startJourney()">
+                    START WALKING
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="escort-active-overlay" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; pointer-events: none;">
+        <div class="glass-panel" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); padding: 10px 20px; border-radius: 30px; display: flex; align-items: center; gap: 10px; pointer-events: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            <div class="pulse-ring" style="width: 10px; height: 10px; border-color: #10b981; position: relative;"></div>
+            <div style="text-align: center;">
+                <span style="font-size: 10px; text-transform: uppercase; color: #6b7280; font-weight: 700;">ARRIVE IN</span>
+                <div id="escort-timer" style="font-size: 20px; font-weight: 900; color: #1f2937; line-height: 1;">00:00</div>
+            </div>
+        </div>
+        <div class="glass-panel" style="position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 24px 24px 0 0; padding: 24px; pointer-events: auto; background: rgba(255, 255, 255, 0.95);">
+            <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #1f2937;">
+                <i class="ph-fill ph-person-walking text-primary"></i> Live Monitoring Active
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button onclick="nightGuardIoT.triggerPanicMode('ESCORT_PANIC')" class="btn-outline" style="border-color: #ef4444; color: #ef4444; font-weight: 800;">
+                    <i class="ph-fill ph-warning"></i> SOS
+                </button>
+                <button onclick="virtualEscort.imSafe()" class="btn-primary" style="background: #10b981; border: none;">
+                    <i class="ph-bold ph-check"></i> I'M SAFE
+                </button>
+            </div>
         </div>
     </div>
 
@@ -184,21 +349,29 @@
         </div>
     </div>
 
+    <div id="modal-add-contact" class="modal-backdrop hidden">
+        <div class="modal-window">
+            <div class="modal-header"><h3>Add Trusted Contact</h3><button onclick="document.getElementById('modal-add-contact').classList.add('hidden')" class="btn-text"><i class="ph ph-x"></i></button></div>
+            <form id="form-add-contact" class="p-4">
+                <input type="text" id="contact-name" placeholder="Full Name (e.g. Mom)" class="input-glass mb-2" required>
+                <input type="tel" id="contact-phone" placeholder="Phone Number" class="input-glass mb-2" required>
+                <input type="text" id="contact-relation" placeholder="Relationship" class="input-glass mb-4">
+                <button class="btn-primary w-100">SAVE CONTACT</button>
+            </form>
+        </div>
+    </div>
+
     <div id="guardian-alert-modal" class="fullscreen-alert hidden" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(12px);">
         <div style="background: white; border-radius: 32px; padding: 32px 24px; width: 90%; max-width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; position: relative;">
-            
             <div style="position: absolute; top: -40px; left: 50%; transform: translateX(-50%); width: 150px; height: 150px; background: radial-gradient(circle, rgba(236, 72, 153, 0.3) 0%, transparent 70%); pointer-events: none;"></div>
-
             <div style="position: relative; margin-bottom: 20px;">
                 <div class="pulse-ring" style="border-color: #ec4899;"></div>
                 <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #ec4899, #be185d); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 10px 20px rgba(236, 72, 153, 0.4);">
                     <i class="ph-fill ph-warning-octagon" style="font-size: 40px; color: white;"></i>
                 </div>
             </div>
-
             <h2 style="font-size: 22px; font-weight: 900; color: #1f2937; margin-bottom: 4px; letter-spacing: -0.5px;">SOS ALERT</h2>
             <p style="color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 24px;">Incoming Distress Signal</p>
-            
             <div style="background: #fdf2f8; border-radius: 20px; padding: 20px; margin-bottom: 24px; border: 1px solid #fbcfe8;">
                 <div style="font-size: 18px; font-weight: 800; color: #be185d; margin-bottom: 6px;" id="alert-victim-name">Unknown User</div>
                 <div style="display: flex; align-items: center; justify-content: center; gap: 6px; color: #db2777; font-size: 13px; font-weight: 600;">
@@ -206,27 +379,106 @@
                     <span id="alert-distance">Tracking location...</span>
                 </div>
             </div>
-
             <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 12px;">
-                <button onclick="ignoreAlert()" style="background: white; border: 2px solid #e5e7eb; color: #6b7280; padding: 16px; border-radius: 18px; font-weight: 700; font-size: 13px; cursor: pointer;">
-                    IGNORE
-                </button>
-                <button onclick="acceptAlert()" style="background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; padding: 16px; border-radius: 18px; font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    RESPOND <i class="ph-bold ph-arrow-right"></i>
-                </button>
+                <button onclick="ignoreAlert()" style="background: white; border: 2px solid #e5e7eb; color: #6b7280; padding: 16px; border-radius: 18px; font-weight: 700; font-size: 13px; cursor: pointer;">IGNORE</button>
+                <button onclick="acceptAlert()" style="background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; padding: 16px; border-radius: 18px; font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; gap: 8px;">RESPOND <i class="ph-bold ph-arrow-right"></i></button>
             </div>
         </div>
     </div>
 
+    <div id="modal-buddy-request" class="modal-backdrop hidden" style="z-index: 3000;">
+        <div class="glass-panel" style="background: white; padding: 30px; border-radius: 24px; text-align: center; width: 90%; max-width: 320px; box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
+            <div style="width: 60px; height: 60px; background: #e0f2fe; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto; color: #0284c7;">
+                <i class="ph-fill ph-hand-waving" style="font-size: 30px;"></i>
+            </div>
+            <h3 style="margin-bottom: 5px; color: #0f172a;">Walking Buddy?</h3>
+            <p style="font-size: 14px; color: #64748b; margin-bottom: 20px;">
+                <strong id="req-name" style="color: #0284c7;">Someone</strong> wants to join your walk to <span id="req-dest">...</span>.
+            </p>
+            
+            <div style="display: flex; gap: 10px;">
+                <button onclick="document.getElementById('modal-buddy-request').classList.add('hidden')" style="flex: 1; padding: 12px; border: 1px solid #cbd5e1; background: white; border-radius: 12px; color: #64748b; font-weight: 700; cursor: pointer;">Ignore</button>
+                <button id="btn-accept-buddy" style="flex: 1; padding: 12px; border: none; background: #0284c7; border-radius: 12px; color: white; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">ACCEPT</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-buddy-chat" class="modal-backdrop hidden" style="z-index: 9999;">
+        <div class="glass-panel chat-window-responsive">
+            
+            <div class="chat-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 35px; height: 35px; background: #0284c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                        <i class="ph-fill ph-chats-circle"></i>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 16px; margin: 0; color: #0c4a6e;">Walking Buddy</h3>
+                        <span style="font-size: 11px; color: #0284c7; font-weight: 600;">● Live Connection</span>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('modal-buddy-chat').classList.add('hidden')" class="btn-text" style="color: #64748b;"><i class="ph-bold ph-x"></i></button>
+            </div>
+
+            <div id="chat-messages-area" class="chat-area">
+                </div>
+
+            <form onsubmit="sendBuddyMessage(event)" class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+                <button type="submit">
+                    <i class="ph-bold ph-paper-plane-right"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
     <audio id="siren-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <script src="./js/iot-sensors.js"></script>
     <script src="./js/auth.js"></script>
     <script src="./js/map.js"></script>
     <script src="./js/guardian.js"></script>
     <script src="./js/history.js"></script>
     <script src="./js/socket-client.js"></script>
+    <script src="./js/escort.js"></script>
+    <script src="./js/settings.js"></script> 
+    <script src="./js/buddy.js"></script>
     <script src="./js/main.js"></script>
+    
+    <script>
+        // NAVIGATION LOGIC
+        window.showSection = function(sectionId) {
+            const dashboard = document.getElementById('section-dashboard');
+            const settings = document.getElementById('section-settings');
+            
+            const navDash = document.getElementById('nav-dash');
+            const navSet = document.getElementById('nav-settings');
+            const mobDash = document.getElementById('mob-nav-dash');
+            const mobSet = document.getElementById('mob-nav-settings');
+
+            if(sectionId === 'dashboard') {
+                dashboard.classList.remove('hidden');
+                settings.classList.add('hidden');
+                
+                navDash.classList.add('active');
+                navSet.classList.remove('active');
+                mobDash.classList.add('active');
+                mobSet.classList.remove('active');
+                
+                if(window.settingsManager) window.settingsManager.updateHeader(true);
+            } else {
+                dashboard.classList.add('hidden');
+                settings.classList.remove('hidden');
+                
+                navDash.classList.remove('active');
+                navSet.classList.add('active');
+                mobDash.classList.remove('active');
+                mobSet.classList.add('active');
+                
+                if(window.settingsManager) {
+                    window.settingsManager.loadProfile();
+                    window.settingsManager.loadContacts();
+                }
+            }
+        }
+    </script>
 </body>
 </html>

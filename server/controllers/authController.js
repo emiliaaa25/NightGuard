@@ -13,20 +13,20 @@ const generateToken = (user) => {
 
 // Register
 exports.register = async (req, res) => {
-    const { username, email, fullName, password } = req.body;
+    const { username, email, phone, fullName, password } = req.body;
 
-    if (!username || !email || !password) {
-        return res.status(400).json({ error: 'Username, email and password are required' });
+    if (!username || !email || !password || !phone) {
+        return res.status(400).json({ error: 'Username, email, phone and password are required' });
     }
 
     try {
         // Verificare duplicate
         const userExists = await pool.query(
-            'SELECT * FROM users WHERE email=$1 OR username=$2',
-            [email, username]
+            'SELECT * FROM users WHERE email=$1 OR username=$2 OR phone=$3',
+            [email, username, phone]
         );
         if (userExists.rows.length > 0) {
-            return res.status(400).json({ error: 'Email or username already exists' });
+            return res.status(400).json({ error: 'Email, username, or phone already exists' });
         }
 
         // Hash parola
@@ -34,8 +34,8 @@ exports.register = async (req, res) => {
 
         // Insert user
         const result = await pool.query(
-            'INSERT INTO users (username, email, password, full_name) VALUES ($1, $2, $3, $4) RETURNING id, username, email, full_name',
-            [username, email, hashedPassword, fullName]
+            'INSERT INTO users (username, email, phone, password, full_name) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, phone, full_name',
+            [username, email, phone, hashedPassword, fullName]
         );
 
         const user = result.rows[0];
@@ -71,7 +71,7 @@ exports.login = async (req, res) => {
         const token = generateToken(user);
 
         res.json({
-            user: { id: user.id, username: user.username, email: user.email, full_name: user.full_name },
+            user: { id: user.id, username: user.username, email: user.email, phone: user.phone, full_name: user.full_name },
             token
         });
     } catch (err) {

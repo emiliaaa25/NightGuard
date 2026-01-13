@@ -117,6 +117,7 @@ window.initAuthForms = function() {
             e.preventDefault();
             const fullName = document.getElementById("registerFullName").value;
             const email = document.getElementById("registerEmail").value;
+            const phone = document.getElementById("registerPhone").value;
             const username = document.getElementById("registerUsername").value;
             const password = document.getElementById("registerPassword").value;
             const confirmPass = document.getElementById("registerConfirmPassword").value;
@@ -127,7 +128,7 @@ window.initAuthForms = function() {
                 const response = await fetch('/api/auth/register', { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ fullName, email, username, password }) 
+                    body: JSON.stringify({ fullName, email, phone, username, password }) 
                 });
                 const data = await response.json();
                 if (response.ok) { 

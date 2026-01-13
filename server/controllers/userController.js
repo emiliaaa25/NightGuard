@@ -6,7 +6,7 @@ const pool = require('../config/db');
 exports.getProfile = async (req, res) => {
     try {
         // Returnăm datele userului + rolul
-        const result = await pool.query('SELECT id, full_name, username, email, is_guardian, role FROM users WHERE id = $1', [req.user.id]);
+        const result = await pool.query('SELECT id, full_name, username, email, phone, is_guardian, role FROM users WHERE id = $1', [req.user.id]);
         
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'User not found' });
@@ -132,5 +132,50 @@ exports.getAlertHistory = async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Nu am putut încărca istoricul." });
+    }
+};
+
+// --- 4. GESTIUNE CONTACTE DE URGENȚĂ ---
+
+exports.getContacts = async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM emergency_contacts WHERE user_id = $1 ORDER BY created_at DESC',
+            [req.user.id]
+        );
+        res.json({ contacts: result.rows });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Database error' });
+    }
+};
+
+exports.addContact = async (req, res) => {
+    const { name, phone, relation } = req.body;
+    
+    if (!name || !phone) return res.status(400).json({ error: 'Name and phone required' });
+
+    try {
+        const result = await pool.query(
+            'INSERT INTO emergency_contacts (user_id, name, phone, relation) VALUES ($1, $2, $3, $4) RETURNING *',
+            [req.user.id, name, phone, relation]
+        );
+        res.json({ contact: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Database error' });
+    }
+};
+
+exports.deleteContact = async (req, res) => {
+    try {
+        await pool.query(
+            'DELETE FROM emergency_contacts WHERE id = $1 AND user_id = $2',
+            [req.params.id, req.user.id]
+        );
+        res.json({ message: 'Deleted' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Database error' });
     }
 };

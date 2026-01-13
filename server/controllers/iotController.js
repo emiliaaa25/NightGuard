@@ -89,11 +89,16 @@ const handleAudioUpload = async (req, res) => {
         res.status(500).json({ error: "Failed to save evidence" });
     }
 };
+// controllers/iotController.js
 
-// --- SAFEROUTE: REPORT HAZARD ---
 const reportHazard = async (req, res) => {
+    // 1. Extragem datele din body
     const { latitude, longitude, type, description } = req.body;
-    const userId = req.user.id;
+    
+    // 2. Extragem ID-ul userului din token (req.user vine din middleware)
+    const userId = req.user.id; 
+
+    console.log(`📝 Reporting Hazard: ${type} at ${latitude}, ${longitude} by User ${userId}`);
 
     try {
         await pool.query(
@@ -102,17 +107,16 @@ const reportHazard = async (req, res) => {
         );
         res.json({ success: true, message: "Hazard reported. Community warned." });
     } catch (err) {
-        console.error(err);
+        console.error("❌ DB Error:", err);
         res.status(500).json({ error: "Failed to report hazard" });
     }
 };
-
 // --- SAFEROUTE: GET SAFETY MAP DATA ---
 const getSafetyMapData = async (req, res) => {
     try {
-        // Get reports from the last 24 hours only
+        // SQL Corect (fără ' la final)
         const reports = await pool.query(
-            "SELECT latitude, longitude, type, description, created_at FROM safety_reports WHERE created_at > NOW() - INTERVAL '24 HOURS'"
+            "SELECT latitude, longitude, type, description, created_at FROM safety_reports"
         );
         res.json({ hazards: reports.rows });
     } catch (err) {
@@ -120,6 +124,7 @@ const getSafetyMapData = async (req, res) => {
         res.status(500).json({ error: "Could not fetch safety data" });
     }
 };
+
 
 module.exports = {
     handlePanicAlert,

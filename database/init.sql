@@ -1,4 +1,4 @@
--- Creare tabel utilizatori
+-- 1. USERS TABLE
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
@@ -7,15 +7,26 @@ CREATE TABLE IF NOT EXISTS users (
     full_name VARCHAR(100),
     bio TEXT,
     avatar_url VARCHAR(255),
+    
+    -- Guardian & Location Specifics (From Image 1)
+    is_guardian BOOLEAN DEFAULT FALSE,
+    last_latitude NUMERIC,
+    last_longitude NUMERIC,
+    last_seen TIMESTAMP,
+    role VARCHAR(50) DEFAULT 'USER', -- e.g., 'USER', 'ADMIN', 'SECURITY'
+    phone VARCHAR(50),
+    application_reason TEXT,
+    experience TEXT,
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Index pentru performanță
+-- Indexing for performance
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_username ON users(username);
 
--- Trigger pentru updated_at
+-- Trigger for updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -26,24 +37,63 @@ $$ language 'plpgsql';
 
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- 2. EMERGENCY CONTACTS TABLE
+CREATE TABLE IF NOT EXISTS emergency_contacts (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    phone VARCHAR(50) NOT NULL,
+    relation VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. ALERTS TABLE
 CREATE TABLE IF NOT EXISTS alerts (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),
     type VARCHAR(50) NOT NULL,           -- 'SOS', 'PANIC'
-    latitude DECIMAL(10, 8),
-    longitude DECIMAL(11, 8),
+    latitude NUMERIC(10, 8),
+    longitude NUMERIC(11, 8),
     status VARCHAR(20) DEFAULT 'ACTIVE',
     source VARCHAR(50) DEFAULT 'USER',   -- 'USER_APP'
     trigger_method VARCHAR(50),          -- 'BUTTON', 'SHAKE'
+    audio_url TEXT,                      -- New column for audio recordings
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 4. SAFETY REPORTS TABLE
 CREATE TABLE IF NOT EXISTS safety_reports (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),
-    latitude DECIMAL(10, 8),
-    longitude DECIMAL(11, 8),
+    latitude NUMERIC(10, 8),
+    longitude NUMERIC(11, 8),
     type VARCHAR(50), -- 'BROKEN_LIGHT', 'DANGEROUS_CROWD', 'SUSPICIOUS'
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS route_posts (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    start_lat DECIMAL(10, 8),
+    start_lng DECIMAL(11, 8),
+    destination_name VARCHAR(100), -- Ex: "Tudor Vladimirescu", "Corp A"
+    departure_time TIMESTAMP,      -- Când vrea să plece
+    status VARCHAR(20) DEFAULT 'ACTIVE', -- 'ACTIVE', 'MATCHED', 'EXPIRED'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index pentru căutări rapide
+CREATE INDEX idx_routes_status ON route_posts(status);
+
+CREATE TABLE IF NOT EXISTS buddy_messages (
+    id SERIAL PRIMARY KEY,
+    route_id INTEGER REFERENCES route_posts(id),
+    sender_id INTEGER REFERENCES users(id),
+    message TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_buddy_messages_route ON buddy_messages(route_id);
+
+ALTER TABLE route_posts ADD COLUMN buddy_id INTEGER REFERENCES users(id);
