@@ -1,0 +1,946 @@
+// === MAPLIBRE GL JS (CLICK & ROUTING FIX) ===
+
+// PUNE CHEIA AICI
+const API_KEY = '7GsswGN4WfdFNk3pJAeV'; 
+
+window.map = null;
+let guardianMarker = null;
+let targetMarker = null;
+let destinationMarker = null; // Marker nou pentru destinația aleasă
+
+const STYLE_DARK = `https://api.maptiler.com/maps/ch-swisstopo-lbm-dark/style.json?key=${API_KEY}`; 
+const STYLE_SAT = `https://api.maptiler.com/maps/satellite/style.json?key=${API_KEY}`;
+
+// --- RESETARE ---
+function resetMapGlobals() {
+    // Stop location tracking
+    stopLocationTracking();
+    
+    if (window.map) {
+        window.map.remove();
+        window.map = null;
+    }
+    guardianMarker = null;
+    targetMarker = null;
+    destinationMarker = null;
+    
+    // Clear custom start location
+    window.customStartLat = null;
+    window.customStartLng = null;
+    if (window.routeStartMarker) {
+        window.routeStartMarker.remove();
+        window.routeStartMarker = null;
+    }
+    
+    // Optionally keep user location for faster re-initialization
+    // Uncomment if you want to reset location too:
+    // window.userLat = null;
+    // window.userLng = null;
+    
+    console.log("🧹 Map cleaned.");
+}
+
+// 1. SAFETY MAP (Aici facem setarea destinației)
+window.openCommunityMap = function() {
+    setupUI('Safe Navigation');
+    
+    setTimeout(() => {
+        resetMapGlobals();
+
+        window.map = new maplibregl.Map({
+            container: 'map',
+            style: STYLE_DARK, 
+            center: [27.6014, 47.1585], // Iași
+            zoom: 15,
+            pitch: 45,
+            attributionControl: false
+        });
+
+        window.map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+        window.map.on('load', () => {
+            window.map.resize(); 
+            loadHazards();
+            
+            // Get user location first, then setup search
+            updateRouteStatus("📍 Getting your location...");
+            locateUser((lat, lng) => {
+                updateMyMarker(lat, lng);
+                window.map.flyTo({ center: [lng, lat], zoom: 16 });
+                updateRouteStatus("✓ Location found. Enter destination or tap map.");
+                
+                // Start continuous location tracking for better accuracy
+                startLocationTracking();
+                
+                // Update "My Location" field with address
+                reverseGeocode(lng, lat).then(placeName => {
+                    const routeStartInput = document.getElementById('route-start');
+                    if (routeStartInput && placeName) {
+                        routeStartInput.value = placeName;
+                    } else if (routeStartInput) {
+                        routeStartInput.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                    }
+                });
+            }, (error) => {
+                console.error("Location error:", error);
+                updateRouteStatus("⚠️ Location access denied. Click 'My Location' to try again.");
+                
+                // Make "My Location" field clickable to retry
+                const routeStartInput = document.getElementById('route-start');
+                if (routeStartInput) {
+                    routeStartInput.value = "Tap to get location";
+                    routeStartInput.style.cursor = 'pointer';
+                    routeStartInput.readOnly = false;
+                    routeStartInput.onclick = () => {
+                        updateRouteStatus("📍 Requesting location...");
+                        locateUser((lat, lng) => {
+                            updateMyMarker(lat, lng);
+                            window.map.flyTo({ center: [lng, lat], zoom: 16 });
+                            updateRouteStatus("✓ Location found. Enter destination or tap map.");
+                            startLocationTracking();
+                            
+                            reverseGeocode(lng, lat).then(placeName => {
+                                if (placeName) {
+                                    routeStartInput.value = placeName;
+                                } else {
+                                    routeStartInput.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                                }
+                                routeStartInput.style.cursor = 'default';
+                                routeStartInput.readOnly = true;
+                            });
+                        }, (err) => {
+                            updateRouteStatus("❌ Could not get location. Please check browser settings.");
+                        });
+                    };
+                }
+            });
+            
+            // Setup address search functionality
+            setupAddressSearch();
+        });
+        
+
+        // --- ASCULTĂTORUL DE CLICK (CRITIC) ---
+        window.map.on('click', (e) => {
+            const clickedLat = e.lngLat.lat;
+            const clickedLng = e.lngLat.lng;
+
+            console.log("🖱️ Map Clicked:", clickedLat, clickedLng);
+
+            // Verificăm dacă știm unde suntem noi (punctul de start)
+            if (!window.userLat || !window.userLng) {
+                updateRouteStatus("⏳ Getting your location...");
+                locateUser((lat, lng) => {
+                    updateMyMarker(lat, lng);
+                    // Continue with the click handler after location is obtained
+                    updateDestinationMarker(clickedLat, clickedLng);
+                    reverseGeocode(clickedLng, clickedLat).then(placeName => {
+                        const routeDestInput = document.getElementById('route-dest');
+                        if (routeDestInput && placeName) {
+                            routeDestInput.value = placeName;
+                        }
+                    });
+                    drawRoute(
+                        [window.userLng, window.userLat], 
+                        [clickedLng, clickedLat], 
+                        'walking'
+                    );
+                }, (error) => {
+                    updateRouteStatus("❌ Cannot get your location. Please allow location access.");
+                    alert("Location access is required. Please allow location access in your browser settings and try again.");
+                });
+                return;
+            }
+
+            // Dacă suntem în modul de setare Escortă sau doar explorăm
+            if (!window.isEscortActive) {
+                // 1. Punem un pin unde am dat click
+                updateDestinationMarker(clickedLat, clickedLng);
+
+                // 2. Optionally reverse geocode to update input field
+                reverseGeocode(clickedLng, clickedLat).then(placeName => {
+                    const routeDestInput = document.getElementById('route-dest');
+                    if (routeDestInput && placeName) {
+                        routeDestInput.value = placeName;
+                    }
+                });
+
+                // 3. Get start location (custom or GPS) and calculate route
+                const startLoc = getStartLocation();
+                if (!startLoc) {
+                    updateRouteStatus("⏳ Getting your location...");
+                    locateUser((lat, lng) => {
+                        window.userLat = lat;
+                        window.userLng = lng;
+                        updateMyMarker(lat, lng);
+                        drawRoute(
+                            [lng, lat], 
+                            [clickedLng, clickedLat], 
+                            'walking'
+                        );
+                    }, (error) => {
+                        updateRouteStatus("❌ Cannot get start location. Please enter a start address.");
+                    });
+                } else {
+                    drawRoute(
+                        [startLoc.lng, startLoc.lat], 
+                        [clickedLng, clickedLat], 
+                        'walking'
+                    );
+                }
+            }
+        });
+
+    }, 200);
+}
+
+// 2. WATCHER MODE
+window.startWatchingMode = function(targetUserId) {
+    setupUI('LIVE TRACKING', '#ec4899');
+    document.getElementById('route-controls').classList.add('hidden');
+
+    setTimeout(() => {
+        resetMapGlobals();
+        window.map = new maplibregl.Map({
+            container: 'map',
+            style: STYLE_DARK,
+            center: [27.6014, 47.1585], 
+            zoom: 14,
+            pitch: 0,
+            attributionControl: false
+        });
+
+        window.map.on('load', () => window.map.resize());
+
+        if(window.socket) {
+            console.log("👀 JOINING ROOM:", targetUserId);
+            window.socket.emit('join_watch_room', targetUserId);
+
+            window.socket.on('update_target_location', (data) => {
+                const lat = parseFloat(data.lat);
+                const lng = parseFloat(data.lng);
+                
+                if (!window.map) return;
+
+                if (!targetMarker) {
+                    const el = document.createElement('div');
+                    el.className = 'victim-marker'; 
+                    // Stiluri inline backup
+                    el.style.width = '24px'; el.style.height = '24px';
+                    el.style.backgroundColor = '#ef4444'; el.style.borderRadius = '50%';
+                    el.style.border = '4px solid white'; el.style.boxShadow = '0 0 20px #ef4444';
+
+                    targetMarker = new maplibregl.Marker({ element: el })
+                        .setLngLat([lng, lat]) 
+                        .addTo(window.map);
+                } else {
+                    targetMarker.setLngLat([lng, lat]);
+                }
+                
+                window.map.flyTo({ center: [lng, lat], speed: 0.5 });
+            });
+        }
+    }, 200);
+}
+
+// 3. RESCUE MISSION
+window.startRescueMission = function(victimLat, victimLng) {
+    setupUI('🚨 RESCUE MISSION', '#ef4444');
+    document.getElementById('route-controls').classList.add('hidden');
+
+    setTimeout(() => {
+        resetMapGlobals();
+        window.map = new maplibregl.Map({
+            container: 'map',
+            style: STYLE_SAT, 
+            center: [victimLng, victimLat],
+            zoom: 16,
+            pitch: 0
+        });
+
+        window.map.on('load', () => {
+            window.map.resize();
+            
+            // Marker Victimă
+            const el = document.createElement('div');
+            el.style.width = '24px'; el.style.height = '24px';
+            el.style.backgroundColor = 'red'; el.style.borderRadius = '50%'; el.style.border = '4px solid white';
+            
+            targetMarker = new maplibregl.Marker({ element: el })
+                .setLngLat([victimLng, victimLat])
+                .addTo(window.map);
+
+            locateUser((myLat, myLng) => {
+                updateMyMarker(myLat, myLng);
+                drawRoute([myLng, myLat], [victimLng, victimLat], 'driving');
+            });
+        });
+    }, 200);
+}
+
+// --- LOGICA RUTARE (OSRM) ---
+async function drawRoute(start, end, profile) {
+    // start/end sunt [lng, lat]
+    const osrmProfile = profile === 'walking' ? 'foot' : 'car';
+    
+    // Enhanced routing parameters for pedestrian safety:
+    // - alternatives=true: Get multiple route options
+    // - steps=true: Get turn-by-turn directions (can help identify pedestrian paths)
+    // - exclude=tollways,ferries: Avoid tolls and ferries
+    // The 'foot' profile already prioritizes pedestrian paths, sidewalks, and avoids highways
+    const url = `https://router.project-osrm.org/route/v1/${osrmProfile}/${start[0]},${start[1]};${end[0]},${end[1]}?overview=full&geometries=geojson&alternatives=true&steps=true`;
+    
+    try {
+        const res = await fetch(url);
+        const json = await res.json();
+        
+        if (!json.routes || json.routes.length === 0) {
+            updateRouteStatus("❌ No route found. Please try a different destination.");
+            return;
+        }
+        
+        // Select the best route (first one, but we could enhance this to pick safest)
+        const routeData = json.routes[0];
+        const durationSeconds = routeData.duration;
+        const distanceMeters = routeData.distance;
+        const durationMinutes = Math.round(durationSeconds / 60);
+        const distanceKm = (distanceMeters / 1000).toFixed(2);
+
+        // Update route status display
+        updateRouteStatus(`✓ Safe route found: ${durationMinutes} min walk (${distanceKm} km) - Uses pedestrian paths`);
+
+        // 1. Desenăm linia pe hartă
+        if (window.map.getSource('route')) {
+            window.map.getSource('route').setData({
+                'type': 'Feature',
+                'properties': {},
+                'geometry': routeData.geometry
+            });
+        } else {
+            window.map.addSource('route', {
+                'type': 'geojson',
+                'data': {
+                    'type': 'Feature',
+                    'properties': {},
+                    'geometry': routeData.geometry
+                }
+            });
+            window.map.addLayer({
+                'id': 'route',
+                'type': 'line',
+                'source': 'route',
+                'layout': { 'line-join': 'round', 'line-cap': 'round' },
+                'paint': {
+                    'line-color': profile === 'walking' ? '#3b82f6' : '#ef4444',
+                    'line-width': 6,
+                    'line-opacity': 0.8
+                }
+            });
+        }
+
+        // Center map on route with padding to show both start and end
+        const coordinates = routeData.geometry.coordinates;
+        if (coordinates.length > 0) {
+            const bounds = new maplibregl.LngLatBounds(
+                coordinates[0],
+                coordinates[0]
+            );
+            
+            // Extend bounds to include all route coordinates
+            coordinates.forEach(coord => {
+                bounds.extend(coord);
+            });
+            
+            window.map.fitBounds(bounds, {
+                padding: { top: 100, bottom: 100, left: 100, right: 100 },
+                maxZoom: 16
+            });
+        }
+
+        // 2. IMPORTANT: Trimitem datele înapoi la Escort UI
+        // Verificăm dacă suntem în modul de setare (flag-ul din escort.js)
+        if (window.isEscortSetupMode && window.virtualEscort) {
+            console.log("✅ Sending estimates to Escort Module:", durationSeconds);
+            window.virtualEscort.updateEstimates(durationSeconds, { lat: end[1], lng: end[0] });
+        }
+
+    } catch (e) {
+        console.error("Routing error:", e);
+        updateRouteStatus("❌ Error calculating route. Please try again.");
+    }
+}
+
+// --- GEOCODING FUNCTIONALITY ---
+async function geocodeAddress(address) {
+    if (!address || address.trim() === '') {
+        return null;
+    }
+
+    try {
+        // Use MapTiler Geocoding API
+        const encodedAddress = encodeURIComponent(address);
+        const url = `https://api.maptiler.com/geocoding/${encodedAddress}.json?key=${API_KEY}&limit=1`;
+        
+        const res = await fetch(url);
+        const json = await res.json();
+        
+        if (json.features && json.features.length > 0) {
+            const feature = json.features[0];
+            return {
+                lat: feature.geometry.coordinates[1],
+                lng: feature.geometry.coordinates[0],
+                place_name: feature.place_name || address
+            };
+        }
+        
+        return null;
+    } catch (e) {
+        console.error("Geocoding error:", e);
+        return null;
+    }
+}
+
+// --- REVERSE GEOCODING (COORDINATES TO ADDRESS) ---
+async function reverseGeocode(lng, lat) {
+    try {
+        // Use MapTiler Reverse Geocoding API
+        const url = `https://api.maptiler.com/geocoding/${lng},${lat}.json?key=${API_KEY}&limit=1`;
+        
+        const res = await fetch(url);
+        const json = await res.json();
+        
+        if (json.features && json.features.length > 0) {
+            return json.features[0].place_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        }
+        
+        return null;
+    } catch (e) {
+        console.error("Reverse geocoding error:", e);
+        return null;
+    }
+}
+
+// --- SETUP ADDRESS SEARCH ---
+function setupAddressSearch() {
+    const routeDestInput = document.getElementById('route-dest');
+    const routeStartInput = document.getElementById('route-start');
+    const btnUseGps = document.getElementById('btn-use-gps');
+
+    if (!routeDestInput) return;
+
+    let searchTimeout = null;
+
+    // Handle Enter key on destination input
+    routeDestInput.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            await calculateRouteFromInputs();
+        }
+    });
+
+    // Handle Enter key on start location input
+    if (routeStartInput) {
+        routeStartInput.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                await handleStartLocationChange();
+            }
+        });
+
+        routeStartInput.addEventListener('blur', async () => {
+            if (routeStartInput.value.trim()) {
+                await handleStartLocationChange();
+            }
+        });
+    }
+
+    // Handle GPS button click
+    if (btnUseGps) {
+        btnUseGps.addEventListener('click', async () => {
+            await useGpsLocation();
+        });
+    }
+
+    // Optional: Add autocomplete on input (debounced)
+    routeDestInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        // Could add autocomplete suggestions here in the future
+    });
+}
+
+// --- HANDLE START LOCATION CHANGE ---
+async function handleStartLocationChange() {
+    const routeStartInput = document.getElementById('route-start');
+    if (!routeStartInput || !routeStartInput.value.trim()) return;
+
+    const address = routeStartInput.value.trim();
+    
+    // Check if it's a GPS location request
+    if (address.toLowerCase() === 'my location' || address.toLowerCase() === 'current location') {
+        await useGpsLocation();
+        return;
+    }
+
+    updateRouteStatus("🔍 Searching for start location...");
+    
+    const result = await geocodeAddress(address);
+    
+    if (!result) {
+        updateRouteStatus("❌ Start location not found. Please check the address.");
+        return;
+    }
+
+    // Update the input with the found place name
+    routeStartInput.value = result.place_name;
+    
+    // Store custom start location
+    window.customStartLat = result.lat;
+    window.customStartLng = result.lng;
+    
+    // Update start marker if route exists
+    if (window.routeStartMarker) {
+        window.routeStartMarker.setLngLat([result.lng, result.lat]);
+    } else {
+        // Create a marker for custom start location
+        const el = document.createElement('div');
+        el.innerHTML = '<i class="ph-fill ph-map-pin" style="color:#10b981; font-size:24px;"></i>';
+        window.routeStartMarker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+            .setLngLat([result.lng, result.lat])
+            .addTo(window.map);
+    }
+
+    updateRouteStatus("✓ Start location set. Enter destination to calculate route.");
+    
+    // If destination is already set, recalculate route
+    const routeDestInput = document.getElementById('route-dest');
+    if (routeDestInput && routeDestInput.value.trim()) {
+        await calculateRouteFromInputs();
+    }
+}
+
+// --- USE GPS LOCATION FOR START ---
+async function useGpsLocation() {
+    const routeStartInput = document.getElementById('route-start');
+    if (!routeStartInput) return;
+
+    // Clear custom start location
+    window.customStartLat = null;
+    window.customStartLng = null;
+    
+    // Remove custom start marker if exists
+    if (window.routeStartMarker) {
+        window.routeStartMarker.remove();
+        window.routeStartMarker = null;
+    }
+
+    if (!window.userLat || !window.userLng) {
+        updateRouteStatus("⏳ Getting your GPS location...");
+        locateUser((lat, lng) => {
+            window.userLat = lat;
+            window.userLng = lng;
+            updateMyMarker(lat, lng);
+            
+            // Update start input with GPS location address
+            reverseGeocode(lng, lat).then(placeName => {
+                if (routeStartInput && placeName) {
+                    routeStartInput.value = placeName;
+                }
+                updateRouteStatus("✓ Using GPS location. Enter destination to calculate route.");
+                
+                // If destination is already set, recalculate route
+                const routeDestInput = document.getElementById('route-dest');
+                if (routeDestInput && routeDestInput.value.trim()) {
+                    calculateRouteFromInputs();
+                }
+            });
+        }, (error) => {
+            updateRouteStatus("❌ Cannot get GPS location. Please allow location access.");
+        });
+    } else {
+        // Already have GPS location, just update the input
+        reverseGeocode(window.userLng, window.userLat).then(placeName => {
+            if (routeStartInput && placeName) {
+                routeStartInput.value = placeName;
+            }
+            updateRouteStatus("✓ Using GPS location. Enter destination to calculate route.");
+            
+            // If destination is already set, recalculate route
+            const routeDestInput = document.getElementById('route-dest');
+            if (routeDestInput && routeDestInput.value.trim()) {
+                calculateRouteFromInputs();
+            }
+        });
+    }
+}
+
+// --- GET CURRENT START LOCATION (GPS OR TYPED) ---
+function getStartLocation() {
+    // Priority: custom typed location > GPS location
+    if (window.customStartLat && window.customStartLng) {
+        return {
+            lat: window.customStartLat,
+            lng: window.customStartLng,
+            isCustom: true
+        };
+    }
+    
+    if (window.userLat && window.userLng) {
+        return {
+            lat: window.userLat,
+            lng: window.userLng,
+            isCustom: false
+        };
+    }
+    
+    return null;
+}
+
+// --- CALCULATE ROUTE FROM BOTH INPUTS ---
+async function calculateRouteFromInputs() {
+    const routeDestInput = document.getElementById('route-dest');
+    if (!routeDestInput || !routeDestInput.value.trim()) {
+        updateRouteStatus("Please enter a destination address");
+        return;
+    }
+
+    // Get start location (custom or GPS)
+    let startLoc = getStartLocation();
+    if (!startLoc) {
+        updateRouteStatus("⏳ Getting your location first...");
+        
+        // Try to get GPS location
+        return new Promise((resolve) => {
+            if (!window.userLat || !window.userLng) {
+                locateUser((lat, lng) => {
+                    window.userLat = lat;
+                    window.userLng = lng;
+                    updateMyMarker(lat, lng);
+                    // Retry route calculation
+                    calculateRouteFromInputs().then(resolve);
+                }, (error) => {
+                    updateRouteStatus("❌ Cannot determine start location. Please enter a start address or allow GPS access.");
+                    resolve();
+                });
+            } else {
+                // Already have GPS location, just retry
+                calculateRouteFromInputs().then(resolve);
+            }
+        });
+    }
+
+    updateRouteStatus("🔍 Searching for destination...");
+    
+    const destResult = await geocodeAddress(routeDestInput.value);
+    
+    if (!destResult) {
+        updateRouteStatus("❌ Destination not found. Please try a different address or click on the map.");
+        return;
+    }
+
+    // Update the destination input with the found place name
+    routeDestInput.value = destResult.place_name;
+
+    // Set destination marker
+    updateDestinationMarker(destResult.lat, destResult.lng);
+
+    // Update start marker based on location type
+    if (startLoc.isCustom) {
+        // Custom start location already has a marker from handleStartLocationChange
+        // Just ensure it's visible
+        if (window.routeStartMarker) {
+            window.routeStartMarker.setLngLat([startLoc.lng, startLoc.lat]);
+        }
+    } else {
+        // Using GPS location - update guardian marker
+        if (window.userLat && window.userLng) {
+            updateMyMarker(window.userLat, window.userLng);
+        }
+    }
+
+    // Draw route
+    drawRoute(
+        [startLoc.lng, startLoc.lat],
+        [destResult.lng, destResult.lat],
+        'walking'
+    );
+
+    // Fly to show both locations
+    window.map.flyTo({
+        center: [destResult.lng, destResult.lat],
+        zoom: 15,
+        speed: 1.2
+    });
+}
+
+// --- SEARCH ADDRESS AND ROUTE (DEPRECATED - Use calculateRouteFromInputs instead) ---
+// Keeping for backward compatibility
+async function searchAndRoute(address) {
+    const routeDestInput = document.getElementById('route-dest');
+    if (routeDestInput) {
+        routeDestInput.value = address;
+    }
+    await calculateRouteFromInputs();
+}
+
+// --- UPDATE ROUTE STATUS ---
+function updateRouteStatus(message) {
+    const statusEl = document.getElementById('route-status');
+    if (statusEl) {
+        statusEl.textContent = message;
+    }
+}
+
+// --- HELPERS ---
+
+function updateMyMarker(lat, lng) {
+    window.userLat = lat;
+    window.userLng = lng;
+    
+    if (!guardianMarker) {
+        const el = document.createElement('div');
+        el.className = 'guardian-marker';
+        el.style.width = '20px'; el.style.height = '20px';
+        el.style.backgroundColor = '#3b82f6'; 
+        el.style.borderRadius = '50%'; el.style.border = '3px solid white';
+        
+        guardianMarker = new maplibregl.Marker({ element: el })
+            .setLngLat([lng, lat])
+            .addTo(window.map);
+    } else {
+        guardianMarker.setLngLat([lng, lat]);
+    }
+}
+
+// Funcție nouă pentru a pune un pin unde dai click
+function updateDestinationMarker(lat, lng) {
+    if (!destinationMarker) {
+        const el = document.createElement('div');
+        el.innerHTML = '<i class="ph-fill ph-flag-checkered" style="color:#ec4899; font-size:24px;"></i>';
+        destinationMarker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+            .setLngLat([lng, lat])
+            .addTo(window.map);
+    } else {
+        destinationMarker.setLngLat([lng, lat]);
+    }
+}
+
+function setupUI(text, color) {
+    const overlay = document.getElementById('map-overlay');
+    overlay.classList.remove('hidden');
+    overlay.style.display = 'flex';
+    document.getElementById('route-controls').classList.remove('hidden');
+    const t = document.getElementById('map-title');
+    if(t) { t.innerHTML = text; if(color) t.style.color = color; }
+}
+
+// --- LOCATE USER WITH ERROR HANDLING ---
+function locateUser(cb, errorCb) {
+    if(!navigator.geolocation) {
+        if (errorCb) errorCb(new Error("Geolocation not supported"));
+        return;
+    }
+    
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            window.userLat = lat;
+            window.userLng = lng;
+            console.log("📍 Location obtained:", lat, lng);
+            if (cb) cb(lat, lng);
+        },
+        (error) => {
+            console.error("❌ Geolocation error:", error);
+            let errorMsg = "Unknown location error";
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMsg = "Location permission denied. Please allow location access in your browser settings.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMsg = "Location information unavailable.";
+                    break;
+                case error.TIMEOUT:
+                    errorMsg = "Location request timed out.";
+                    break;
+            }
+            if (errorCb) errorCb(new Error(errorMsg));
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    );
+}
+
+// --- START CONTINUOUS LOCATION TRACKING (OPTIONAL) ---
+function startLocationTracking() {
+    if (!navigator.geolocation || !window.map) return;
+    
+    // Clear any existing watch
+    if (window.locationWatchId) {
+        navigator.geolocation.clearWatch(window.locationWatchId);
+    }
+    
+    window.locationWatchId = navigator.geolocation.watchPosition(
+        (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            
+            // Update location if changed significantly
+            if (!window.userLat || !window.userLng || 
+                Math.abs(window.userLat - lat) > 0.0001 || 
+                Math.abs(window.userLng - lng) > 0.0001) {
+                
+                window.userLat = lat;
+                window.userLng = lng;
+                updateMyMarker(lat, lng);
+                
+                // Optionally update the start input address periodically
+                // (commented out to avoid too many API calls)
+                // reverseGeocode(lng, lat).then(placeName => {
+                //     const routeStartInput = document.getElementById('route-start');
+                //     if (routeStartInput && placeName) {
+                //         routeStartInput.value = placeName;
+                //     }
+                // });
+            }
+        },
+        (error) => {
+            console.error("Location tracking error:", error);
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 5000
+        }
+    );
+}
+
+// --- STOP LOCATION TRACKING ---
+function stopLocationTracking() {
+    if (window.locationWatchId) {
+        navigator.geolocation.clearWatch(window.locationWatchId);
+        window.locationWatchId = null;
+    }
+}
+
+window.closeMap = function() { 
+    // Stop location tracking when closing map
+    stopLocationTracking();
+    
+    document.getElementById('map-overlay').style.display = 'none';
+    if(window.location.search.includes('watch') || document.getElementById('map-title').innerText.includes("LIVE")) {
+        window.location.reload();
+    }
+}
+
+// ==========================================
+// 4. HAZARD REPORTING (LIPSEA)
+// ==========================================
+// ==========================================
+// 4. HAZARD REPORTING (FINAL)
+// ==========================================
+
+window.reportCurrentLocationHazard = async function() {
+    // 1. Verificăm locația
+    if (!window.userLat || !window.userLng) {
+        alert("Waiting for GPS...");
+        locateUser((lat, lng) => {
+            window.userLat = lat;
+            window.userLng = lng;
+        });
+        return;
+    }
+
+    // 2. Userul alege tipul
+    const type = prompt("REPORT HAZARD:\nType one: DARK, ACCIDENT, CROWD, ANIMAL");
+    if (!type) return; 
+
+    const validTypes = ['DARK', 'ACCIDENT', 'CROWD', 'ANIMAL', 'ICE', 'OTHER'];
+    const finalType = type.toUpperCase(); // Facem textul mare automat
+
+    // 3. Adăugăm vizual pe hartă (Instant Feedback)
+    const el = document.createElement('div');
+    el.innerHTML = '<i class="ph-fill ph-warning-octagon" style="color:#f59e0b; font-size:24px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);"></i>';
+    
+    new maplibregl.Marker({ element: el })
+        .setLngLat([window.userLng, window.userLat])
+        .setPopup(new maplibregl.Popup().setHTML(`<b>${finalType}</b><br>Just reported`))
+        .addTo(window.map);
+
+    // 4. TRIMITEM LA SERVER (Aceasta parte lipsea/era comentată)
+    const token = localStorage.getItem("nightguard_token");
+    
+    try {
+        const response = await fetch('/api/iot/report', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // Critic: trebuie să fim logați
+            },
+            body: JSON.stringify({
+                type: finalType,
+                description: "User reported via Live Map",
+                latitude: window.userLat,
+                longitude: window.userLng
+            })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log("✅ Hazard saved to DB:", result);
+            alert(`Hazard "${finalType}" reported successfully!`);
+        } else {
+            console.error("❌ Failed to save:", result);
+            alert("Error saving report. Check console.");
+        }
+
+    } catch(e) { 
+        console.error("❌ Network Error:", e); 
+        alert("Server connection failed.");
+    }
+};
+
+// Funcție pentru a încărca pericolele existente
+async function loadHazards() {
+    const token = localStorage.getItem("nightguard_token");
+    console.log("🔄 Loading hazards from DB..."); // Debug
+
+    try {
+        const res = await fetch('/api/iot/safety-map', { headers: { 'Authorization': `Bearer ${token}` }});
+        const data = await res.json();
+        
+        console.log("📦 Hazards Received:", data.hazards); // Vezi aici dacă primești datele
+
+        if(data.hazards && window.map) {
+            data.hazards.forEach(h => {
+                // 1. Creăm elementul vizual
+                const el = document.createElement('div');
+                el.className = 'hazard-marker'; // Folosim o clasă CSS
+                el.innerHTML = '<i class="ph-fill ph-warning-octagon" style="color:#f59e0b; font-size:24px;"></i>';
+                el.style.width = '24px';
+                el.style.height = '24px';
+                el.style.cursor = 'pointer';
+
+                // 2. CONVERTIM COORDONATELE (Critic!)
+                const lat = parseFloat(h.latitude);
+                const lng = parseFloat(h.longitude);
+
+                // 3. Adăugăm pe hartă
+                new maplibregl.Marker({ element: el })
+                    .setLngLat([lng, lat]) // MapLibre vrea [Lng, Lat]
+                    .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`
+                        <div style="text-align:center;">
+                            <b style="color:#f59e0b">${h.type}</b><br>
+                            <span style="font-size:12px; color:#666;">${h.description || ''}</span>
+                        </div>
+                    `))
+                    .addTo(window.map);
+            });
+        }
+    } catch(e) { 
+        console.error("❌ Error loading hazards:", e); 
+    }
+}
