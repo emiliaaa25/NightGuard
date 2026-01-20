@@ -87,8 +87,8 @@ Create a `.env` file in the root directory:
 ```bash
 # .env
 PORT=3000
-DATABASE_URL=postgresql://postgres:your_password@localhost:5432/nightsafe
-JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+DATABASE_URL=postgresql://postgres:Acer21rr@localhost:5432/nightsafe
+JWT_SECRET=AndreeaC
 JWT_EXPIRES_IN=7d
 ```
 
