@@ -97,3 +97,15 @@ CREATE TABLE IF NOT EXISTS buddy_messages (
 CREATE INDEX idx_buddy_messages_route ON buddy_messages(route_id);
 
 ALTER TABLE route_posts ADD COLUMN buddy_id INTEGER REFERENCES users(id);
+
+-- 6. USER RATINGS (Trust System)
+CREATE TABLE IF NOT EXISTS user_ratings (
+    id SERIAL PRIMARY KEY,
+    reviewer_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    target_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    stars SMALLINT CHECK (stars >= 1 AND stars <= 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_user_ratings_target ON user_ratings(target_id);
