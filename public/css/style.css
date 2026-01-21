@@ -125,35 +125,24 @@ input, textarea { font-family: inherit; color: var(--text-main); }
 
 /* PANIC CARD */
 .panic-card { 
-    grid-column: 1 / 2; min-height: 260px; position: relative; overflow: auto; max-height: 85vh;
+    grid-column: 1 / 2; min-height: 260px; position: relative; overflow: hidden; 
     border-radius: 28px; cursor: pointer; border: none;
     background: var(--panic-gradient); 
     display: flex; flex-direction: column; justify-content: space-between; padding: 32px;
     box-shadow: 0 15px 40px rgba(236, 72, 153, 0.4);
     transition: transform 0.2s;
 }
-
-.panic-card.help-coming {
-    min-height: auto;
-}
-
 .panic-card:active { transform: scale(0.98); }
 .panic-bg-effect {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background: radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.4) 0%, transparent 50%);
     mix-blend-mode: overlay; animation: pulseLight 3s infinite;
 }
-.panic-content { 
-    position: relative; 
-    z-index: 2; 
-    display: flex; 
-    flex-direction: column;
-    align-items: flex-start; 
-    gap: 16px;
-}
+.panic-content { position: relative; z-index: 2; display: flex; align-items: center; gap: 20px; }
 .panic-icon-lg { width: 70px; height: 70px; background: rgba(255,255,255,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; color: #fff; border: 2px solid rgba(255,255,255,0.6); backdrop-filter: blur(10px); flex-shrink: 0; }
 .panic-content h3 { font-size: 24px; font-weight: 900; color: white; margin-bottom: 6px; }
 .panic-content p { color: rgba(255,255,255,1); font-size: 15px; font-weight: 600; }
+.status-pill { background: white; color: var(--primary); align-self: flex-start; padding: 8px 16px; border-radius: 30px; font-size: 12px; font-weight: 800; letter-spacing: 1px; position: relative; z-index: 2; }
 
 /* AUTH */
 .auth-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 50; display: flex; justify-content: center; align-items: center; padding: 20px; background: var(--bg-body); }
@@ -241,24 +230,7 @@ input, textarea { font-family: inherit; color: var(--text-main); }
         gap: 16px; 
     }
     
-    .panic-card { 
-        min-height: 240px;
-        padding: 24px;
-    }
-    
-    .panic-card.help-coming {
-        min-height: auto;
-        max-height: 90vh;
-    }
-    
-    #rescue-actions {
-        gap: 10px !important;
-    }
-    
-    .rescue-action-btn {
-        padding: 12px;
-        min-height: 60px;
-    }
+    .panic-card { min-height: 240px; }
     
     /* 8. Bottom Nav - Respectă bara de Home (Swipe Up) */
     .bottom-nav { 
@@ -305,206 +277,6 @@ input, textarea { font-family: inherit; color: var(--text-main); }
     70% { box-shadow: 0 0 0 20px rgba(190, 24, 93, 0); }
     100% { box-shadow: 0 0 0 0 rgba(190, 24, 93, 0); }
 }
-
-/* === HELP IS COMING STATE === */
-.panic-card.help-coming {
-    background: linear-gradient(135deg, #059669, #10b981, #34d399);
-    animation: pulseHelp 2s infinite;
-}
-
-.panic-card.help-coming .panic-icon-lg {
-    background: white;
-    color: #10b981;
-}
-
-.panic-card.help-coming .status-pill {
-    color: white;
-    background: #059669;
-    font-weight: 800;
-}
-
-@keyframes pulseHelp {
-    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-    70% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-}
-
-/* === PANIC ACTION BUTTON === */
-.panic-action-btn {
-    width: 100%;
-    padding: 14px;
-    border: none;
-    border-radius: 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-    font-family: 'Inter', sans-serif;
-    position: relative;
-    overflow: hidden;
-    min-height: 60px;
-    touch-action: manipulation;
-    -webkit-user-select: none;
-    user-select: none;
-    background: white;
-    color: #ef4444;
-    border: 2px solid #ef4444;
-}
-
-.panic-action-btn:active {
-    transform: scale(0.96);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-}
-
-.panic-action-btn .rescue-btn-icon {
-    font-size: 28px;
-    color: #ef4444;
-}
-
-.panic-action-btn .rescue-btn-text {
-    text-align: left;
-    flex: 1;
-}
-
-.panic-action-btn .rescue-btn-title {
-    color: #ef4444;
-    font-weight: 800;
-    font-size: 16px;
-}
-
-@keyframes blink {
-    0%, 49%, 100% { opacity: 1; }
-    50%, 99% { opacity: 0.3; }
-}
-
-/* === RESCUE ACTION BUTTONS (PREMIUM DESIGN) === */
-
-.rescue-action-btn {
-    width: 100%;
-    padding: 16px;
-    border: none;
-    border-radius: 16px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    font-family: 'Inter', sans-serif;
-    position: relative;
-    overflow: hidden;
-    min-height: 70px;
-    touch-action: manipulation;
-    -webkit-user-select: none;
-    user-select: none;
-}
-
-.rescue-action-btn::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
-    opacity: 0;
-    transition: opacity 0.3s;
-    pointer-events: none;
-}
-
-.rescue-action-btn:active::before {
-    opacity: 1;
-}
-
-.rescue-action-btn:active {
-    transform: scale(0.96);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
-}
-
-.rescue-btn-icon {
-    font-size: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 50px;
-    flex-shrink: 0;
-}
-
-.rescue-btn-text {
-    text-align: left;
-    flex: 1;
-}
-
-.rescue-btn-title {
-    font-weight: 800;
-    font-size: 16px;
-    letter-spacing: -0.3px;
-    margin-bottom: 2px;
-}
-
-.rescue-btn-desc {
-    font-size: 12px;
-    opacity: 0.8;
-    font-weight: 500;
-}
-
-/* MAP BUTTON */
-.rescue-btn-map {
-    background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
-    color: white;
-}
-
-.rescue-btn-map:hover {
-    box-shadow: 0 6px 28px rgba(6, 182, 212, 0.35);
-    transform: translateY(-2px);
-}
-
-/* STOP BUTTON */
-.rescue-btn-stop {
-    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-    color: #374151;
-    border: 2px solid #d1d5db;
-}
-
-.rescue-btn-stop:hover {
-    border-color: #9ca3af;
-    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
-}
-
-/* SAFE BUTTON */
-.rescue-btn-safe {
-    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-    color: white;
-}
-
-.rescue-btn-safe:hover {
-    box-shadow: 0 6px 28px rgba(16, 185, 129, 0.4);
-    transform: translateY(-2px);
-}
-
-/* Mobile optimization */
-@media (max-width: 480px) {
-    .rescue-action-btn {
-        padding: 14px;
-        min-height: 65px;
-        border-radius: 14px;
-    }
-    
-    .rescue-btn-icon {
-        font-size: 32px;
-        min-width: 45px;
-    }
-    
-    .rescue-btn-title {
-        font-size: 15px;
-    }
-    
-    .rescue-btn-desc {
-        font-size: 11px;
-    }
-}
-
 
 @keyframes pulseRed { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 @keyframes pulseLight { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.7; } }
