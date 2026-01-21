@@ -41,6 +41,7 @@ const handlePanicAlert = async (req, res) => {
         guardians.forEach(guardian => {
             io.to(`user_${guardian.id}`).emit('emergency_alert', {
                 alertId: alertResult.rows[0].id,
+                victimId: userId,  // Add victim ID
                 victimName: victimName,
                 distance: "Nearby",
                 location: { lat: latitude, lng: longitude },
