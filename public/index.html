@@ -307,10 +307,14 @@
             <button onclick="closeMap()" class="btn-icon"><i class="ph ph-x"></i></button>
         </div>
         <div id="route-controls" class="map-bar">
-            <div class="search-box"><i class="ph ph-navigation-arrow"></i> <input type="text" id="route-start" readonly
-                    placeholder="My Location"></div>
-            <div class="search-box"><i class="ph ph-flag"></i> <input type="text" id="route-dest"
-                    placeholder="Where to?"></div>
+            <div class="search-box">
+                <i class="ph ph-navigation-arrow"></i> 
+                <input type="text" id="route-start" placeholder="My Location or type address"></input>
+                <button id="btn-use-gps" class="btn-icon-small" title="Use my GPS location">
+                    <i class="ph ph-crosshairs"></i>
+                </button>
+            </div>
+            <div class="search-box"><i class="ph ph-flag"></i> <input type="text" id="route-dest" placeholder="Where to?"></div>
             <div id="route-status" class="status-text">Tap map to set destination</div>
         </div>
         <div id="map"></div>
