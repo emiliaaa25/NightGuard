@@ -1,25 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>NightGuard</title>
-    
+
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#fdf4ff">
-    
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
+
     <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
     <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
-    
+
     <link rel="stylesheet" href="./css/style.css">
     <script src="/socket.io/socket.io.js"></script>
 </head>
+
 <body>
 
-    <div id="start-overlay" class="fullscreen-overlay" style="background: #fdf4ff; z-index: 9999; justify-content: center; align-items: center; display: flex;">
+    <div id="start-overlay" class="fullscreen-overlay"
+        style="background: #fdf4ff; z-index: 9999; justify-content: center; align-items: center; display: flex;">
         <div style="text-align: center;">
             <div class="loader-ring mb-4"></div>
             <h1 style="font-size: 24px; font-weight: 800; color: #1f2937;">NightGuard</h1>
@@ -49,23 +53,29 @@
                     <button class="btn-primary w-100 mt-2">LOGIN</button>
                 </form>
                 <div class="auth-footer mt-4 text-center">
-                    <span class="text-muted">No account?</span> 
+                    <span class="text-muted">No account?</span>
                     <button id="showRegister" class="text-link">Register Now</button>
                 </div>
             </div>
 
             <div id="registerSection" class="hidden">
                 <form id="registerForm">
-                    <div class="input-group"><i class="ph ph-user"></i><input type="text" id="registerFullName" placeholder="Full Name" required></div>
-                    <div class="input-group"><i class="ph ph-envelope-simple"></i><input type="email" id="registerEmail" placeholder="Email" required></div>
-                    <div class="input-group"><i class="ph ph-envelope-simple"></i><input type="tel" id="registerPhone" placeholder="Phone" required></div>
-                    <div class="input-group"><i class="ph ph-identification-card"></i><input type="text" id="registerUsername" placeholder="Username" required></div>
-                    <div class="input-group"><i class="ph ph-lock-key"></i><input type="password" id="registerPassword" placeholder="Password" required></div>
-                    <div class="input-group"><i class="ph ph-lock-key"></i><input type="password" id="registerConfirmPassword" placeholder="Confirm Password" required></div>
+                    <div class="input-group"><i class="ph ph-user"></i><input type="text" id="registerFullName"
+                            placeholder="Full Name" required></div>
+                    <div class="input-group"><i class="ph ph-envelope-simple"></i><input type="email" id="registerEmail"
+                            placeholder="Email" required></div>
+                    <div class="input-group"><i class="ph ph-envelope-simple"></i><input type="tel" id="registerPhone"
+                            placeholder="Phone" required></div>
+                    <div class="input-group"><i class="ph ph-identification-card"></i><input type="text"
+                            id="registerUsername" placeholder="Username" required></div>
+                    <div class="input-group"><i class="ph ph-lock-key"></i><input type="password" id="registerPassword"
+                            placeholder="Password" required></div>
+                    <div class="input-group"><i class="ph ph-lock-key"></i><input type="password"
+                            id="registerConfirmPassword" placeholder="Confirm Password" required></div>
                     <button class="btn-primary w-100 mt-2">CREATE ACCOUNT</button>
                 </form>
                 <div class="auth-footer mt-4 text-center">
-                    <span class="text-muted">Have an account?</span> 
+                    <span class="text-muted">Have an account?</span>
                     <button id="showLogin" class="text-link">Back to Login</button>
                 </div>
             </div>
@@ -73,21 +83,26 @@
     </div>
 
     <div id="dashboard-view" class="app-wrapper hidden">
-        
+
         <aside class="sidebar desktop-only glass-panel">
             <div class="brand">
-                <i class="ph-fill ph-shield-check text-primary"></i> 
+                <i class="ph-fill ph-shield-check text-primary"></i>
                 <span>NIGHTGUARD</span>
             </div>
             <nav class="nav-menu">
-                <button onclick="showSection('dashboard')" class="nav-item active" id="nav-dash"><i class="ph ph-grid-four"></i> Dashboard</button>
-                <button onclick="openCommunityMap()" class="nav-item"><i class="ph ph-map-trifold"></i> Live Map</button>
-                <button onclick="openHistoryModal()" class="nav-item"><i class="ph ph-clock-counter-clockwise"></i> History</button>
-                <button onclick="showSection('settings')" class="nav-item" id="nav-settings"><i class="ph ph-gear"></i> Settings</button>
-                
+                <button onclick="showSection('dashboard')" class="nav-item active" id="nav-dash"><i
+                        class="ph ph-grid-four"></i> Dashboard</button>
+                <button onclick="openCommunityMap()" class="nav-item"><i class="ph ph-map-trifold"></i> Live
+                    Map</button>
+                <button onclick="openHistoryModal()" class="nav-item"><i class="ph ph-clock-counter-clockwise"></i>
+                    History</button>
+                <button onclick="showSection('settings')" class="nav-item" id="nav-settings"><i class="ph ph-gear"></i>
+                    Settings</button>
+
                 <div id="admin-link-wrapper" class="hidden">
                     <div class="nav-divider">ADMIN</div>
-                    <button onclick="document.getElementById('admin-panel').scrollIntoView()" class="nav-item"><i class="ph ph-users-three"></i> Applicants</button>
+                    <button onclick="document.getElementById('admin-panel').scrollIntoView()" class="nav-item"><i
+                            class="ph ph-users-three"></i> Applicants</button>
                 </div>
             </nav>
             <div class="sidebar-footer">
@@ -99,19 +114,23 @@
             <header class="top-bar">
                 <div>
                     <h2 id="welcomeTitle">Hello</h2>
-                    <div id="guardianStatusText" class="status-indicator"><span class="dot online"></span> System Active</div>
+                    <div id="guardianStatusText" class="status-indicator"><span class="dot online"></span> System Active
+                    </div>
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="showSection('settings')" class="icon-btn mobile-only"><i class="ph ph-gear"></i></button>
+                    <button onclick="showSection('settings')" class="icon-btn mobile-only"><i
+                            class="ph ph-gear"></i></button>
                     <button id="logoutBtnMobile" class="icon-btn mobile-only"><i class="ph ph-sign-out"></i></button>
                 </div>
-                <div class="desktop-only"><div id="guardian-controls-container"></div></div>
+                <div class="desktop-only">
+                    <div id="guardian-controls-container"></div>
+                </div>
             </header>
 
             <div id="guardian-controls-mobile" class="mobile-only mb-4"></div>
 
             <div id="section-dashboard" class="content-grid">
-                
+
                 <div class="grid-card panic-card" onclick="nightGuardIoT.triggerPanicMode('BUTTON_PRESS')">
                     <div class="panic-bg-effect"></div>
                     <div class="panic-content">
@@ -124,41 +143,48 @@
                     <div id="btn-panic" class="status-pill">STANDBY</div>
                 </div>
 
-                <div class="grid-card glass-panel" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd;">
-                    <div class="card-header" style="border-bottom-color: #bae6fd;">
-                        <i class="ph-fill ph-users-three" style="color: #0284c7;"></i>
-                        <h3 style="color: #0369a1;">Walking Buddy</h3>
+                <div class="grid-card glass-panel"
+                    style="background: linear-gradient(135deg,#fff1f2 0%,#ffe4f0 100%); border: 1px solid #fbcfe8;">
+                    <div class="card-header" style="border-bottom-color: #fbcfe8;">
+                        <i class="ph-fill ph-users-three" style="color: #ec4899;"></i>
+                        <h3 style="color: #831843;">Walking Buddy</h3>
                     </div>
 
-                    <div id="active-walk-container" class="hidden" style="margin-bottom: 15px; background: white; padding: 15px; border-radius: 12px; border-left: 4px solid #0ea5e9; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-    <div style="font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px;">
-        Current Mission
-    </div>
-    <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 15px;">
-        Walking to <span id="active-dest" style="color: #0284c7;">...</span>
-    </div>
-    
-    <div style="display: flex; gap: 10px;">
-        <button id="btn-reopen-chat" class="btn-primary" style="flex: 1; background: #0284c7; font-size: 13px; border: none; padding: 10px; border-radius: 10px; color: white; cursor: pointer;">
-            <i class="ph-bold ph-chats-circle"></i> CHAT
-        </button>
-        
-        <button id="btn-end-walk" class="btn-outline" style="flex: 1; border: 2px solid #10b981; color: #10b981; background: white; font-size: 12px; font-weight: 800; padding: 10px; border-radius: 10px; cursor: pointer;">
-            <i class="ph-bold ph-check"></i> WE MET
-        </button>
-    </div>
-</div>
+                    <div id="active-walk-container" class="hidden"
+                        style="margin-bottom: 15px; background: white; padding: 15px; border-radius: 12px; border-left: 4px solid #0ea5e9; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                        <div
+                            style="font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px;">
+                            Current Mission
+                        </div>
+                        <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 15px;">
+                            Walking to <span id="active-dest" style="color: #0284c7;">...</span>
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <button id="btn-reopen-chat" class="btn-primary"
+                                style="flex: 1; background: linear-gradient(135deg,#ec4899,#be185d); font-size: 13px; border: none; padding: 10px; border-radius: 10px; color: white; cursor: pointer; box-shadow:0 6px 18px rgba(236,72,153,0.12);">
+                                <i class="ph-bold ph-chats-circle"></i> CHAT
+                            </button>
+
+                            <button id="btn-end-walk" class="btn-outline"
+                                style="flex: 1; border: 2px solid #ec4899; color: #ec4899; background: white; font-size: 12px; font-weight: 800; padding: 10px; border-radius: 10px; cursor: pointer;">
+                                <i class="ph-bold ph-check"></i> WE MET
+                            </button>
+                        </div>
+                    </div>
 
                     <div id="buddy-list-view">
                         <p class="text-muted" style="font-size: 13px; margin-bottom: 15px;">
                             Students walking near you right now:
                         </p>
-                        <div id="buddy-matches-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto; margin-bottom: 15px;">
+                        <div id="buddy-matches-container"
+                            style="display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto; margin-bottom: 15px;">
                             <div class="empty-state" style="padding: 10px; font-size: 12px;">
                                 Searching for walkers...
                             </div>
                         </div>
-                        <button onclick="showPostRouteForm()" class="btn-primary w-100" style="background: #0284c7; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">
+                        <button onclick="showPostRouteForm()" class="btn-primary w-100"
+                            style="background: #0284c7; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">
                             <i class="ph-bold ph-plus"></i> POST MY ROUTE
                         </button>
                     </div>
@@ -170,7 +196,8 @@
                         </div>
                         <div class="input-group" style="border-color: #bae6fd;">
                             <i class="ph ph-clock" style="color: #0284c7;"></i>
-                            <select id="buddy-time" style="border: none; background: transparent; width: 100%; outline: none; color: #1f2937;">
+                            <select id="buddy-time"
+                                style="border: none; background: transparent; width: 100%; outline: none; color: #1f2937;">
                                 <option value="0">Leaving Now</option>
                                 <option value="5">In 5 mins</option>
                                 <option value="10">In 10 mins</option>
@@ -178,8 +205,10 @@
                             </select>
                         </div>
                         <div style="display: flex; gap: 10px;">
-                            <button onclick="hidePostRouteForm()" class="btn-outline" style="border-color: #94a3b8; color: #64748b;">Cancel</button>
-                            <button onclick="submitRoute()" class="btn-primary" style="flex: 1; background: #0284c7;">Post</button>
+                            <button onclick="hidePostRouteForm()" class="btn-outline"
+                                style="border-color: #94a3b8; color: #64748b;">Cancel</button>
+                            <button onclick="submitRoute()" class="btn-primary"
+                                style="flex: 1; background: #0284c7;">Post</button>
                         </div>
                     </div>
                 </div>
@@ -194,14 +223,17 @@
                         <p style="font-size: 13px; color: #6b7280; margin-bottom: 15px; line-height: 1.4;">
                             Walking alone? Share your route with Trusted Contacts. Auto-alert on timeout.
                         </p>
-                        <button class="btn-primary w-100" style="background: linear-gradient(135deg, #ec4899, #be185d); border: none; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);">
+                        <button class="btn-primary w-100"
+                            style="background: linear-gradient(135deg, #ec4899, #be185d); border: none; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);">
                             <i class="ph-bold ph-navigation-arrow"></i> PLAN JOURNEY
                         </button>
                     </div>
                 </div>
 
                 <div class="grid-card glass-panel">
-                    <div class="card-header"><i class="ph ph-radar text-primary"></i><h3>Nearby Guardians</h3></div>
+                    <div class="card-header"><i class="ph ph-radar text-primary"></i>
+                        <h3>Nearby Guardians</h3>
+                    </div>
                     <div id="communityContainer" class="scroller-y">
                         <div class="empty-state">
                             <i class="ph ph-scan"></i>
@@ -211,12 +243,16 @@
                 </div>
 
                 <div id="admin-panel" class="grid-card glass-panel full-width hidden">
-                    <div class="card-header"><i class="ph ph-files"></i><h3>Pending Approvals</h3></div>
+                    <div class="card-header"><i class="ph ph-files"></i>
+                        <h3>Pending Approvals</h3>
+                    </div>
                     <div id="applicants-list"></div>
                 </div>
-                
+
                 <div id="application-panel" class="grid-card glass-panel hidden">
-                    <div class="card-header"><i class="ph ph-certificate"></i><h3>Become a Guardian</h3></div>
+                    <div class="card-header"><i class="ph ph-certificate"></i>
+                        <h3>Become a Guardian</h3>
+                    </div>
                     <button id="btn-apply" onclick="openApplyModal()" class="btn-outline">Apply Now</button>
                     <p id="app-status" class="hidden text-warning mt-2">Verification Pending</p>
                 </div>
@@ -229,20 +265,26 @@
                             <i class="ph-fill ph-user"></i>
                         </div>
                         <div>
-                            <h2 style="font-size: 20px; font-weight: 800; color: #1f2937;" id="settings-name">Loading...</h2>
+                            <h2 style="font-size: 20px; font-weight: 800; color: #1f2937;" id="settings-name">Loading...
+                            </h2>
                             <p style="color: #6b7280; font-size: 14px;" id="settings-email">user@email.com</p>
-                            <span class="status-pill" style="margin-top: 5px; display: inline-block; background: #d1fae5; color: #065f46;">VERIFIED USER</span>
+                            <span class="status-pill"
+                                style="margin-top: 5px; display: inline-block; background: #d1fae5; color: #065f46;">VERIFIED
+                                USER</span>
                         </div>
                     </div>
-                    
-                    <h3 style="margin-bottom: 15px; font-size: 16px; color: #374151;"><i class="ph-fill ph-users-three text-primary"></i> Trusted Contacts</h3>
-                    <p class="text-muted" style="font-size: 13px; margin-bottom: 20px;">These people will be notified during SOS Alerts and Virtual Escort missions.</p>
-                    
+
+                    <h3 style="margin-bottom: 15px; font-size: 16px; color: #374151;"><i
+                            class="ph-fill ph-users-three text-primary"></i> Trusted Contacts</h3>
+                    <p class="text-muted" style="font-size: 13px; margin-bottom: 20px;">These people will be notified
+                        during SOS Alerts and Virtual Escort missions.</p>
+
                     <div id="contacts-list" class="contact-list mb-4">
                         <div class="empty-state">No contacts added yet.</div>
                     </div>
 
-                    <button onclick="document.getElementById('modal-add-contact').classList.remove('hidden')" class="btn-outline w-100">
+                    <button onclick="document.getElementById('modal-add-contact').classList.remove('hidden')"
+                        class="btn-outline w-100">
                         <i class="ph-bold ph-plus"></i> ADD NEW CONTACT
                     </button>
                 </div>
@@ -252,9 +294,11 @@
     </div>
 
     <nav id="bottom-nav" class="bottom-nav mobile-only hidden">
-        <button onclick="showSection('dashboard')" class="nav-link active" id="mob-nav-dash"><i class="ph ph-grid-four"></i><span>Home</span></button>
+        <button onclick="showSection('dashboard')" class="nav-link active" id="mob-nav-dash"><i
+                class="ph ph-grid-four"></i><span>Home</span></button>
         <button onclick="openCommunityMap()" class="nav-link"><i class="ph ph-map-trifold"></i><span>Map</span></button>
-        <button onclick="showSection('settings')" class="nav-link" id="mob-nav-settings"><i class="ph ph-gear"></i><span>Settings</span></button>
+        <button onclick="showSection('settings')" class="nav-link" id="mob-nav-settings"><i
+                class="ph ph-gear"></i><span>Settings</span></button>
     </nav>
 
     <div id="map-overlay" class="fullscreen-overlay hidden">
@@ -263,8 +307,10 @@
             <button onclick="closeMap()" class="btn-icon"><i class="ph ph-x"></i></button>
         </div>
         <div id="route-controls" class="map-bar">
-            <div class="search-box"><i class="ph ph-navigation-arrow"></i> <input type="text" id="route-start" readonly placeholder="My Location"></div>
-            <div class="search-box"><i class="ph ph-flag"></i> <input type="text" id="route-dest" placeholder="Where to?"></div>
+            <div class="search-box"><i class="ph ph-navigation-arrow"></i> <input type="text" id="route-start" readonly
+                    placeholder="My Location"></div>
+            <div class="search-box"><i class="ph ph-flag"></i> <input type="text" id="route-dest"
+                    placeholder="Where to?"></div>
             <div id="route-status" class="status-text">Tap map to set destination</div>
         </div>
         <div id="map"></div>
@@ -277,14 +323,16 @@
         <div class="modal-window">
             <div class="modal-header">
                 <h3>Plan Journey</h3>
-                <button onclick="document.getElementById('modal-escort-setup').classList.add('hidden')" class="btn-text"><i class="ph ph-x"></i></button>
+                <button onclick="document.getElementById('modal-escort-setup').classList.add('hidden')"
+                    class="btn-text"><i class="ph ph-x"></i></button>
             </div>
             <div class="p-4">
                 <p class="text-muted mb-4">Select your destination on the map to calculate walking time.</p>
                 <button onclick="virtualEscort.pickDestinationOnMap()" class="btn-secondary w-100 mb-4">
                     <i class="ph-bold ph-map-pin"></i> SELECT DESTINATION
                 </button>
-                <div id="escort-estimates" class="hidden mb-4" style="background: #fdf2f8; padding: 15px; border-radius: 12px; border: 1px solid #fbcfe8;">
+                <div id="escort-estimates" class="hidden mb-4"
+                    style="background: #fdf2f8; padding: 15px; border-radius: 12px; border: 1px solid #fbcfe8;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                         <span class="text-muted">Estimated Walk:</span>
                         <strong id="est-time-val">0 min</strong>
@@ -306,20 +354,26 @@
         </div>
     </div>
 
-    <div id="escort-active-overlay" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; pointer-events: none;">
-        <div class="glass-panel" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); padding: 10px 20px; border-radius: 30px; display: flex; align-items: center; gap: 10px; pointer-events: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+    <div id="escort-active-overlay" class="hidden"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; pointer-events: none;">
+        <div class="glass-panel"
+            style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); padding: 10px 20px; border-radius: 30px; display: flex; align-items: center; gap: 10px; pointer-events: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
             <div class="pulse-ring" style="width: 10px; height: 10px; border-color: #10b981; position: relative;"></div>
             <div style="text-align: center;">
-                <span style="font-size: 10px; text-transform: uppercase; color: #6b7280; font-weight: 700;">ARRIVE IN</span>
-                <div id="escort-timer" style="font-size: 20px; font-weight: 900; color: #1f2937; line-height: 1;">00:00</div>
+                <span style="font-size: 10px; text-transform: uppercase; color: #6b7280; font-weight: 700;">ARRIVE
+                    IN</span>
+                <div id="escort-timer" style="font-size: 20px; font-weight: 900; color: #1f2937; line-height: 1;">00:00
+                </div>
             </div>
         </div>
-        <div class="glass-panel" style="position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 24px 24px 0 0; padding: 24px; pointer-events: auto; background: rgba(255, 255, 255, 0.95);">
+        <div class="glass-panel"
+            style="position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 24px 24px 0 0; padding: 24px; pointer-events: auto; background: rgba(255, 255, 255, 0.95);">
             <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #1f2937;">
                 <i class="ph-fill ph-person-walking text-primary"></i> Live Monitoring Active
             </h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <button onclick="nightGuardIoT.triggerPanicMode('ESCORT_PANIC')" class="btn-outline" style="border-color: #ef4444; color: #ef4444; font-weight: 800;">
+                <button onclick="nightGuardIoT.triggerPanicMode('ESCORT_PANIC')" class="btn-outline"
+                    style="border-color: #ef4444; color: #ef4444; font-weight: 800;">
                     <i class="ph-fill ph-warning"></i> SOS
                 </button>
                 <button onclick="virtualEscort.imSafe()" class="btn-primary" style="background: #10b981; border: none;">
@@ -331,19 +385,27 @@
 
     <div id="modal-history" class="modal-backdrop hidden">
         <div class="modal-window">
-            <div class="modal-header"><h3>Security Logs</h3><button onclick="document.getElementById('modal-history').classList.add('hidden')" class="btn-text"><i class="ph ph-x"></i></button></div>
+            <div class="modal-header">
+                <h3>Security Logs</h3><button onclick="document.getElementById('modal-history').classList.add('hidden')"
+                    class="btn-text"><i class="ph ph-x"></i></button>
+            </div>
             <div id="history-list" class="modal-content-scroll"></div>
         </div>
     </div>
 
     <div id="modal-apply" class="modal-backdrop hidden">
         <div class="modal-window">
-            <div class="modal-header"><h3>Guardian Application</h3><button onclick="closeModal('modal-apply')" class="btn-text"><i class="ph ph-x"></i></button></div>
+            <div class="modal-header">
+                <h3>Guardian Application</h3><button onclick="closeModal('modal-apply')" class="btn-text"><i
+                        class="ph ph-x"></i></button>
+            </div>
             <form id="form-apply" class="p-4" style="padding: 24px;">
                 <input type="text" id="app-phone" placeholder="Phone Number" class="input-glass mb-2" required>
                 <input type="text" id="app-idcard" placeholder="ID / Badge Number" class="input-glass mb-2" required>
-                <textarea id="app-reason" placeholder="Why do you want to join?" class="input-glass mb-2" style="min-height: 80px;"></textarea>
-                <textarea id="app-exp" placeholder="Relevant Experience" class="input-glass mb-4" style="min-height: 80px;"></textarea>
+                <textarea id="app-reason" placeholder="Why do you want to join?" class="input-glass mb-2"
+                    style="min-height: 80px;"></textarea>
+                <textarea id="app-exp" placeholder="Relevant Experience" class="input-glass mb-4"
+                    style="min-height: 80px;"></textarea>
                 <button class="btn-primary w-100">SUBMIT APPLICATION</button>
             </form>
         </div>
@@ -351,9 +413,14 @@
 
     <div id="modal-add-contact" class="modal-backdrop hidden">
         <div class="modal-window">
-            <div class="modal-header"><h3>Add Trusted Contact</h3><button onclick="document.getElementById('modal-add-contact').classList.add('hidden')" class="btn-text"><i class="ph ph-x"></i></button></div>
+            <div class="modal-header">
+                <h3>Add Trusted Contact</h3><button
+                    onclick="document.getElementById('modal-add-contact').classList.add('hidden')" class="btn-text"><i
+                        class="ph ph-x"></i></button>
+            </div>
             <form id="form-add-contact" class="p-4">
-                <input type="text" id="contact-name" placeholder="Full Name (e.g. Mom)" class="input-glass mb-2" required>
+                <input type="text" id="contact-name" placeholder="Full Name (e.g. Mom)" class="input-glass mb-2"
+                    required>
                 <input type="tel" id="contact-phone" placeholder="Phone Number" class="input-glass mb-2" required>
                 <input type="text" id="contact-relation" placeholder="Relationship" class="input-glass mb-4">
                 <button class="btn-primary w-100">SAVE CONTACT</button>
@@ -361,54 +428,74 @@
         </div>
     </div>
 
-    <div id="guardian-alert-modal" class="fullscreen-alert hidden" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(12px);">
-        <div style="background: white; border-radius: 32px; padding: 32px 24px; width: 90%; max-width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; position: relative;">
-            <div style="position: absolute; top: -40px; left: 50%; transform: translateX(-50%); width: 150px; height: 150px; background: radial-gradient(circle, rgba(236, 72, 153, 0.3) 0%, transparent 70%); pointer-events: none;"></div>
+    <div id="guardian-alert-modal" class="fullscreen-alert hidden"
+        style="background: rgba(0,0,0,0.6); backdrop-filter: blur(12px);">
+        <div
+            style="background: white; border-radius: 32px; padding: 32px 24px; width: 90%; max-width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; position: relative;">
+            <div
+                style="position: absolute; top: -40px; left: 50%; transform: translateX(-50%); width: 150px; height: 150px; background: radial-gradient(circle, rgba(236, 72, 153, 0.3) 0%, transparent 70%); pointer-events: none;">
+            </div>
             <div style="position: relative; margin-bottom: 20px;">
                 <div class="pulse-ring" style="border-color: #ec4899;"></div>
-                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #ec4899, #be185d); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 10px 20px rgba(236, 72, 153, 0.4);">
+                <div
+                    style="width: 80px; height: 80px; background: linear-gradient(135deg, #ec4899, #be185d); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 10px 20px rgba(236, 72, 153, 0.4);">
                     <i class="ph-fill ph-warning-octagon" style="font-size: 40px; color: white;"></i>
                 </div>
             </div>
-            <h2 style="font-size: 22px; font-weight: 900; color: #1f2937; margin-bottom: 4px; letter-spacing: -0.5px;">SOS ALERT</h2>
-            <p style="color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 24px;">Incoming Distress Signal</p>
-            <div style="background: #fdf2f8; border-radius: 20px; padding: 20px; margin-bottom: 24px; border: 1px solid #fbcfe8;">
-                <div style="font-size: 18px; font-weight: 800; color: #be185d; margin-bottom: 6px;" id="alert-victim-name">Unknown User</div>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 6px; color: #db2777; font-size: 13px; font-weight: 600;">
+            <h2 style="font-size: 22px; font-weight: 900; color: #1f2937; margin-bottom: 4px; letter-spacing: -0.5px;">
+                SOS ALERT</h2>
+            <p
+                style="color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 24px;">
+                Incoming Distress Signal</p>
+            <div
+                style="background: #fdf2f8; border-radius: 20px; padding: 20px; margin-bottom: 24px; border: 1px solid #fbcfe8;">
+                <div style="font-size: 18px; font-weight: 800; color: #be185d; margin-bottom: 6px;"
+                    id="alert-victim-name">Unknown User</div>
+                <div
+                    style="display: flex; align-items: center; justify-content: center; gap: 6px; color: #db2777; font-size: 13px; font-weight: 600;">
                     <i class="ph-fill ph-map-pin"></i>
                     <span id="alert-distance">Tracking location...</span>
                 </div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 12px;">
-                <button onclick="ignoreAlert()" style="background: white; border: 2px solid #e5e7eb; color: #6b7280; padding: 16px; border-radius: 18px; font-weight: 700; font-size: 13px; cursor: pointer;">IGNORE</button>
-                <button onclick="acceptAlert()" style="background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; padding: 16px; border-radius: 18px; font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; gap: 8px;">RESPOND <i class="ph-bold ph-arrow-right"></i></button>
+                <button onclick="ignoreAlert()"
+                    style="background: white; border: 2px solid #e5e7eb; color: #6b7280; padding: 16px; border-radius: 18px; font-weight: 700; font-size: 13px; cursor: pointer;">IGNORE</button>
+                <button onclick="acceptAlert()"
+                    style="background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; padding: 16px; border-radius: 18px; font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; gap: 8px;">RESPOND
+                    <i class="ph-bold ph-arrow-right"></i></button>
             </div>
         </div>
     </div>
 
     <div id="modal-buddy-request" class="modal-backdrop hidden" style="z-index: 3000;">
-        <div class="glass-panel" style="background: white; padding: 30px; border-radius: 24px; text-align: center; width: 90%; max-width: 320px; box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
-            <div style="width: 60px; height: 60px; background: #e0f2fe; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto; color: #0284c7;">
+        <div class="glass-panel"
+            style="background: linear-gradient(135deg,#fff1f2,#ffe4f0); padding: 26px; border-radius: 24px; text-align: center; width: 90%; max-width: 320px; box-shadow: 0 20px 50px rgba(236,72,153,0.12); border: 1px solid rgba(236,72,153,0.06);">
+            <div
+                style="width: 60px; height: 60px; background: linear-gradient(135deg,#ec4899,#be185d); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto; color: white; box-shadow: 0 8px 20px rgba(236,72,153,0.12);">
                 <i class="ph-fill ph-hand-waving" style="font-size: 30px;"></i>
             </div>
             <h3 style="margin-bottom: 5px; color: #0f172a;">Walking Buddy?</h3>
             <p style="font-size: 14px; color: #64748b; margin-bottom: 20px;">
-                <strong id="req-name" style="color: #0284c7;">Someone</strong> wants to join your walk to <span id="req-dest">...</span>.
+                <strong id="req-name" style="color: #831843;">Someone</strong> wants to join your walk to <span
+                    id="req-dest">...</span>.
             </p>
-            
+
             <div style="display: flex; gap: 10px;">
-                <button onclick="document.getElementById('modal-buddy-request').classList.add('hidden')" style="flex: 1; padding: 12px; border: 1px solid #cbd5e1; background: white; border-radius: 12px; color: #64748b; font-weight: 700; cursor: pointer;">Ignore</button>
-                <button id="btn-accept-buddy" style="flex: 1; padding: 12px; border: none; background: #0284c7; border-radius: 12px; color: white; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">ACCEPT</button>
+                <button onclick="document.getElementById('modal-buddy-request').classList.add('hidden')"
+                    style="flex: 1; padding: 12px; border: 1px solid #fbcfe8; background: white; border-radius: 12px; color: #9f1239; font-weight: 700; cursor: pointer;">Ignore</button>
+                <button id="btn-accept-buddy"
+                    style="flex: 1; padding: 12px; border: none; background: linear-gradient(135deg,#ec4899,#be185d); border-radius: 12px; color: white; font-weight: 800; cursor: pointer; box-shadow: 0 8px 20px rgba(236,72,153,0.18);">ACCEPT</button>
             </div>
         </div>
     </div>
 
     <div id="modal-buddy-chat" class="modal-backdrop hidden" style="z-index: 9999;">
         <div class="glass-panel chat-window-responsive">
-            
+
             <div class="chat-header">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 35px; height: 35px; background: #0284c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                    <div
+                        style="width: 35px; height: 35px; background: #0284c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
                         <i class="ph-fill ph-chats-circle"></i>
                     </div>
                     <div>
@@ -416,11 +503,12 @@
                         <span style="font-size: 11px; color: #0284c7; font-weight: 600;">● Live Connection</span>
                     </div>
                 </div>
-                <button onclick="document.getElementById('modal-buddy-chat').classList.add('hidden')" class="btn-text" style="color: #64748b;"><i class="ph-bold ph-x"></i></button>
+                <button onclick="document.getElementById('modal-buddy-chat').classList.add('hidden')" class="btn-text"
+                    style="color: #64748b;"><i class="ph-bold ph-x"></i></button>
             </div>
 
             <div id="chat-messages-area" class="chat-area">
-                </div>
+            </div>
 
             <form onsubmit="sendBuddyMessage(event)" class="chat-input-area">
                 <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
@@ -431,7 +519,35 @@
         </div>
     </div>
 
-    <audio id="siren-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+    <!-- Rating Modal (Pink Theme) -->
+    <div id="modal-rating" class="modal-backdrop hidden" style="z-index: 3500;">
+        <div class="glass-panel"
+            style="background: linear-gradient(135deg,#fff1f2,#ffe4f0); padding: 18px; border-radius: 20px; width: 90%; max-width: 360px; box-shadow: 0 20px 50px rgba(236,72,153,0.12); border: 1px solid rgba(236,72,153,0.08);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; font-size:18px; color:#831843;">Cum a fost drumul cu <span id="rating-target-name"
+                        style="color:#ec4899;">...?</span>?</h3>
+                <button onclick="closeRatingModal()" class="btn-text" style="color:#9f1239;"><i
+                        class="ph-bold ph-x"></i></button>
+            </div>
+            <div style="margin-top:12px; text-align:center;">
+                <div id="rating-stars" style="font-size:30px; color:#ec4899; letter-spacing:6px;">
+                    <span data-star="1">☆</span><span data-star="2">☆</span><span data-star="3">☆</span><span
+                        data-star="4">☆</span><span data-star="5">☆</span>
+                </div>
+                <textarea id="rating-comment" placeholder="Scrie un comentariu scurt..." class="input-glass mt-3"
+                    style="width:100%; min-height:80px; padding:10px; border-radius:10px; border:1px solid rgba(236,72,153,0.12);"></textarea>
+                <div style="display:flex; gap:8px; margin-top:12px;">
+                    <button onclick="skipRating()" class="btn-outline"
+                        style="flex:1; border-color:#f3e6ea; color:#9f1239; background: white;">Skip</button>
+                    <button id="btn-submit-rating" class="btn-primary"
+                        style="flex:1; background: linear-gradient(135deg,#ec4899,#be185d); border:none; color:white; box-shadow:0 6px 18px rgba(236,72,153,0.18);">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <audio id="siren-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"
+        preload="auto"></audio>
     <script src="./js/iot-sensors.js"></script>
     <script src="./js/auth.js"></script>
     <script src="./js/map.js"></script>
@@ -439,41 +555,41 @@
     <script src="./js/history.js"></script>
     <script src="./js/socket-client.js"></script>
     <script src="./js/escort.js"></script>
-    <script src="./js/settings.js"></script> 
+    <script src="./js/settings.js"></script>
     <script src="./js/buddy.js"></script>
     <script src="./js/main.js"></script>
-    
+
     <script>
         // NAVIGATION LOGIC
-        window.showSection = function(sectionId) {
+        window.showSection = function (sectionId) {
             const dashboard = document.getElementById('section-dashboard');
             const settings = document.getElementById('section-settings');
-            
+
             const navDash = document.getElementById('nav-dash');
             const navSet = document.getElementById('nav-settings');
             const mobDash = document.getElementById('mob-nav-dash');
             const mobSet = document.getElementById('mob-nav-settings');
 
-            if(sectionId === 'dashboard') {
+            if (sectionId === 'dashboard') {
                 dashboard.classList.remove('hidden');
                 settings.classList.add('hidden');
-                
+
                 navDash.classList.add('active');
                 navSet.classList.remove('active');
                 mobDash.classList.add('active');
                 mobSet.classList.remove('active');
-                
-                if(window.settingsManager) window.settingsManager.updateHeader(true);
+
+                if (window.settingsManager) window.settingsManager.updateHeader(true);
             } else {
                 dashboard.classList.add('hidden');
                 settings.classList.remove('hidden');
-                
+
                 navDash.classList.remove('active');
                 navSet.classList.add('active');
                 mobDash.classList.remove('active');
                 mobSet.classList.add('active');
-                
-                if(window.settingsManager) {
+
+                if (window.settingsManager) {
                     window.settingsManager.loadProfile();
                     window.settingsManager.loadContacts();
                 }
@@ -481,4 +597,5 @@
         }
     </script>
 </body>
+
 </html>
