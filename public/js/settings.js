@@ -75,12 +75,25 @@ class SettingsManager {
                 data.contacts.forEach((c) => {
                     const item = document.createElement('div');
                     item.className = 'contact-item';
+                    
+                    // Generate initials from name
+                    const initials = this.getInitials(c.name);
+                    
+                    // Get avatar color based on name (consistent color for same name)
+                    const avatarColor = this.getAvatarColor(c.name);
+                    
                     item.innerHTML = `
+                        <div class="contact-item-left">
+                            <div class="contact-avatar" style="background: ${avatarColor};">
+                                ${initials}
+                            </div>
                         <div class="contact-info">
-                            <h4>${c.name}</h4>
-                            <p>${c.relation || 'Friend'} • ${c.phone}</p>
+                                <h4>${this.escapeHtml(c.name)}</h4>
+                                <p class="contact-relationship">${this.escapeHtml(c.relation || 'Friend')}</p>
+                                <p class="contact-phone">${this.escapeHtml(c.phone)}</p>
+                            </div>
                         </div>
-                        <button onclick="window.settingsManager.deleteContact(${c.id})" class="btn-delete-contact">
+                        <button onclick="window.settingsManager.deleteContact(${c.id})" class="btn-delete-contact" title="Delete contact">
                             <i class="ph-bold ph-trash"></i>
                         </button>
                     `;
@@ -138,6 +151,50 @@ class SettingsManager {
                 this.loadContacts();
             }
         } catch(e) { console.error(e); }
+    }
+
+    // 6. Get Initials from Name
+    getInitials(name) {
+        if (!name) return '?';
+        const words = name.trim().split(/\s+/);
+        if (words.length === 1) {
+            return words[0].charAt(0).toUpperCase();
+        }
+        return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+    }
+
+    // 7. Get Avatar Color (consistent for same name)
+    getAvatarColor(name) {
+        if (!name) return '#6b7280';
+        
+        // Generate a consistent color based on name
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        
+        // Color palette - soft, pleasant colors
+        const colors = [
+            'linear-gradient(135deg, #ec4899, #db2777)', // Pink
+            'linear-gradient(135deg, #3b82f6, #2563eb)', // Blue
+            'linear-gradient(135deg, #10b981, #059669)', // Green
+            'linear-gradient(135deg, #f59e0b, #d97706)', // Amber
+            'linear-gradient(135deg, #8b5cf6, #7c3aed)', // Purple
+            'linear-gradient(135deg, #ef4444, #dc2626)', // Red
+            'linear-gradient(135deg, #06b6d4, #0891b2)', // Cyan
+            'linear-gradient(135deg, #f97316, #ea580c)', // Orange
+        ];
+        
+        const index = Math.abs(hash) % colors.length;
+        return colors[index];
+    }
+
+    // 8. Escape HTML to prevent XSS
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
 
