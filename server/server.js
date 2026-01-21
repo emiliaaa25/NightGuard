@@ -218,10 +218,192 @@ io.on('connection', (socket) => {
         console.log(`✅ Socket ${socket.id} joined chat room: ${roomName}`);
     });
 
+    // === SOS ALERT ACCEPTANCE ===
+    socket.on('guardian_accept_alert', async ({ alertId, victimId }) => {
+        const guardianId = socket.userId;
+        
+        if (!guardianId || !victimId || !alertId) {
+            console.log("⚠️ Missing data for guardian acceptance");
+            return;
+        }
+
+        try {
+            // 1. Get guardian info
+            const guardianRes = await pool.query(
+                "SELECT full_name, last_latitude, last_longitude FROM users WHERE id = $1",
+                [guardianId]
+            );
+            
+            if (guardianRes.rows.length === 0) return;
+            
+            const guardian = guardianRes.rows[0];
+            
+            // 2. Get victim location for ETA calculation
+            const alertRes = await pool.query(
+                "SELECT latitude, longitude FROM alerts WHERE id = $1",
+                [alertId]
+            );
+            
+            if (alertRes.rows.length === 0) return;
+            
+            const victimLocation = alertRes.rows[0];
+            
+            // 3. Calculate ETA (simple calculation - can be improved with routing API)
+            const distance = calculateDistance(
+                guardian.last_latitude, 
+                guardian.last_longitude,
+                victimLocation.latitude,
+                victimLocation.longitude
+            );
+            
+            // Assume average speed of 30 km/h for emergency response
+            const etaMinutes = Math.ceil((distance / 30) * 60);
+            
+            // 4. Update alert status to RESPONDING (using existing columns only)
+            await pool.query(
+                "UPDATE alerts SET status = 'RESPONDING' WHERE id = $1",
+                [alertId]
+            );
+            
+            // 5. Create tracking room for guardian-victim pair
+            const trackingRoom = `rescue_${alertId}`;
+            socket.join(trackingRoom);
+            
+            console.log(`🚨 Guardian ${guardian.full_name} accepted Alert ${alertId}. ETA: ${etaMinutes} min`);
+            
+            // 6. Notify victim that help is coming
+            io.to(`user_${victimId}`).emit('guardian_coming', {
+                alertId,
+                guardianName: guardian.full_name,
+                guardianId,
+                eta: etaMinutes,
+                trackingRoom,
+                guardianLocation: {
+                    lat: guardian.last_latitude,
+                    lng: guardian.last_longitude
+                }
+            });
+            
+            // 7. Confirm to guardian
+            socket.emit('rescue_mission_started', {
+                alertId,
+                victimId,
+                trackingRoom,
+                victimLocation: {
+                    lat: victimLocation.latitude,
+                    lng: victimLocation.longitude
+                }
+            });
+            
+        } catch (err) {
+            console.error("Guardian acceptance error:", err);
+        }
+    });
+
+    // === BIDIRECTIONAL LOCATION TRACKING ===
+    
+    // Guardian sends location updates during rescue
+    socket.on('guardian_location_update', ({ alertId, lat, lng }) => {
+        const guardianId = socket.userId;
+        const trackingRoom = `rescue_${alertId}`;
+        
+        // Broadcast guardian location to victim
+        socket.to(trackingRoom).emit('update_guardian_location', {
+            guardianId,
+            lat,
+            lng,
+            timestamp: new Date()
+        });
+        
+        console.log(`📍 Guardian ${guardianId} location -> Room ${trackingRoom}: ${lat}, ${lng}`);
+    });
+    
+    // Victim sends location updates (even if moving/running)
+    socket.on('victim_location_update', ({ alertId, lat, lng }) => {
+        const victimId = socket.userId;
+        const trackingRoom = `rescue_${alertId}`;
+        
+        // Update alert location in database (using existing columns)
+        pool.query(
+            "UPDATE alerts SET latitude = $1, longitude = $2 WHERE id = $3",
+            [lat, lng, alertId]
+        ).catch(err => console.error("DB update error:", err));
+        
+        // Broadcast victim location to guardian
+        socket.to(trackingRoom).emit('update_victim_location', {
+            victimId,
+            lat,
+            lng,
+            timestamp: new Date()
+        });
+        
+        console.log(`📍 Victim ${victimId} location -> Room ${trackingRoom}: ${lat}, ${lng}`);
+    });
+    
+    // Join tracking room (for victims who reload or reconnect)
+    socket.on('join_tracking_room', ({ alertId }) => {
+        const trackingRoom = `rescue_${alertId}`;
+        socket.join(trackingRoom);
+        console.log(`👁️ User ${socket.userId} joined tracking room: ${trackingRoom}`);
+    });
+
+    // Victim marks themselves as safe
+    socket.on('victim_safe', async ({ alertId }) => {
+        const victimId = socket.userId;
+        const trackingRoom = `rescue_${alertId}`;
+        
+        try {
+            // Update alert status to RESOLVED
+            await pool.query(
+                "UPDATE alerts SET status = 'RESOLVED' WHERE id = $1",
+                [alertId]
+            );
+            
+            console.log(`✅ Victim ${victimId} marked Alert ${alertId} as SAFE`);
+            
+            // Notify guardian that victim is safe
+            io.to(trackingRoom).emit('victim_marked_safe', {
+                alertId,
+                victimId,
+                message: 'Victim has marked themselves as safe'
+            });
+            
+        } catch (err) {
+            console.error("Victim safe error:", err);
+        }
+    });
+    
+    // Victim stops recording but alert stays active
+    socket.on('victim_recording_stopped', ({ alertId }) => {
+        const victimId = socket.userId;
+        const trackingRoom = `rescue_${alertId}`;
+        
+        console.log(`⏹️ Victim ${victimId} stopped recording for Alert ${alertId}. Broadcasting to room: ${trackingRoom}`);
+        
+        // Notify guardian that recording stopped
+        io.to(trackingRoom).emit('victim_recording_stopped_notification', {
+            alertId,
+            victimId,
+            message: 'Victim stopped recording - still waiting for rescue'
+        });
+    });
+
     socket.on('disconnect', () => {
         // Cleanup standard
     });
 });
+
+// Helper function: Calculate distance between two points (Haversine formula)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Distance in km
+}
 
 // API Routes
 app.use('/api/auth', authRoutes);
