@@ -1,12 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const http = require('http'); 
-const { Server } = require("socket.io"); 
+const http = require('http');
+const { Server } = require("socket.io");
 require('dotenv').config();
 
 // Database Connection
-const pool = require('./config/db'); 
+const pool = require('./config/db');
 
 // Route Imports
 const authRoutes = require('./routes/authRoutes');
@@ -36,7 +36,7 @@ io.on('connection', (socket) => {
 
     // 1. LOGIN: Userul intră în camera lui personală
     socket.on('join_user_room', (userId) => {
-        socket.userId = userId; 
+        socket.userId = userId;
         socket.join(`user_${userId}`);
         console.log(`👤 User ${userId} joined notification room.`);
     });
@@ -44,7 +44,7 @@ io.on('connection', (socket) => {
     // 2. START ESCORT: Logica de filtrare contacte
     socket.on('escort_start', async (data) => {
         const userId = socket.userId;
-        if(!userId) return;
+        if (!userId) return;
 
         // A. Userul intră în camera de transmisie
         const trackRoom = `track_${userId}`;
@@ -66,7 +66,7 @@ io.on('connection', (socket) => {
                 JOIN emergency_contacts ec ON u.phone = ec.phone
                 WHERE ec.user_id = $1
             `;
-            
+
             const result = await pool.query(query, [userId]);
             const friends = result.rows;
 
@@ -95,7 +95,7 @@ io.on('connection', (socket) => {
     socket.on('escort_update', (data) => {
         // Luăm ID-ul din pachetul trimis de client (data.userId)
         // Asta e mult mai sigur decât socket.userId
-        const senderId = data.userId || socket.userId; 
+        const senderId = data.userId || socket.userId;
 
         if (!senderId) {
             console.log("⚠️ GPS update ignored: No User ID.");
@@ -103,13 +103,13 @@ io.on('connection', (socket) => {
         }
 
         const trackRoom = `track_${senderId}`;
-        
+
         // Trimitem locația la Watchers
         socket.to(trackRoom).emit('update_target_location', {
             lat: data.lat,
             lng: data.lng
         });
-        
+
         console.log(`📡 Update from User ${senderId} -> Room ${trackRoom}`);
     });
     // 4. WATCHER: Prietenul intră să vadă harta
@@ -124,13 +124,13 @@ io.on('connection', (socket) => {
         if (!socket.userId) return;
         const trackRoom = `track_${socket.userId}`;
         socket.to(trackRoom).emit('friend_journey_ended', { friendId: socket.userId });
-        
+
         // Opțional: Curățăm camera, dar lăsăm userul principal
         const room = io.sockets.adapter.rooms.get(trackRoom);
-        if(room) {
+        if (room) {
             room.forEach((socketId) => {
                 const clientSocket = io.sockets.sockets.get(socketId);
-                if(clientSocket && clientSocket.userId !== socket.userId) {
+                if (clientSocket && clientSocket.userId !== socket.userId) {
                     clientSocket.leave(trackRoom);
                 }
             });
@@ -141,17 +141,24 @@ io.on('connection', (socket) => {
     // A. Cineva cere să se alăture unei plimbări
     socket.on('buddy_join_request', async ({ routeId }) => {
         const requesterId = socket.userId;
-        
+
         try {
             // 1. Aflăm cine deține ruta și cum îl cheamă pe solicitant
             const routeRes = await pool.query('SELECT user_id, destination_name FROM route_posts WHERE id = $1', [routeId]);
             const userRes = await pool.query('SELECT full_name FROM users WHERE id = $1', [requesterId]);
-            
+
             if (routeRes.rows.length === 0 || userRes.rows.length === 0) return;
 
             const ownerId = routeRes.rows[0].user_id;
             const requesterName = userRes.rows[0].full_name;
             const dest = routeRes.rows[0].destination_name;
+
+            // 1.b Get requester's average rating (if any)
+            let requesterRating = 0;
+            try {
+                const r = await pool.query("SELECT COALESCE(ROUND(AVG(stars)::numeric,1),0) as avg_rating FROM user_ratings WHERE target_id = $1", [requesterId]);
+                if (r.rows.length > 0) requesterRating = r.rows[0].avg_rating;
+            } catch (e) { console.error('Rating lookup failed', e); }
 
             // 2. Trimitem notificare proprietarului rutei
             // (Folosim camera 'user_ID' creată la login)
@@ -159,9 +166,10 @@ io.on('connection', (socket) => {
                 routeId,
                 requesterId,
                 requesterName,
+                requesterRating,
                 destination: dest
             });
-            
+
             console.log(`🤝 Buddy Request: ${requesterName} -> User ${ownerId}`);
 
         } catch (err) { console.error(err); }
@@ -173,9 +181,9 @@ io.on('connection', (socket) => {
     socket.on('buddy_request_accepted', async ({ routeId, requesterId }) => {
         const ownerId = socket.userId;
         const roomName = `walk_${routeId}`;
-        
-        socket.join(roomName); 
-        
+
+        socket.join(roomName);
+
         io.to(`user_${requesterId}`).emit('buddy_request_confirmed', {
             routeId,
             ownerId,
@@ -183,10 +191,10 @@ io.on('connection', (socket) => {
         });
 
         socket.emit('buddy_match_success', { requesterId, routeId });
-        
+
         // --- MODIFICARE AICI: Salvăm și buddy_id ---
         await pool.query(
-            "UPDATE route_posts SET status = 'MATCHED', buddy_id = $1 WHERE id = $2", 
+            "UPDATE route_posts SET status = 'MATCHED', buddy_id = $1 WHERE id = $2",
             [requesterId, routeId]
         );
     });
@@ -234,15 +242,15 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Fallback Route
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+    res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 // Error Handling
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Internal Server Error' });
+    console.error(err.stack);
+    res.status(500).json({ error: 'Internal Server Error' });
 });
 
 server.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
+    console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
