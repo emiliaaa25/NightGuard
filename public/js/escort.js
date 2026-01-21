@@ -9,10 +9,12 @@ class VirtualEscort {
         this.watchId = null;
         this.destinationLatLng = null; // Final Coordinates
     }
-
+    
     // 1. Open Setup
     openSetup() {
-        document.getElementById('modal-escort-setup').classList.remove('hidden');
+        window.isEscortSetupMode = true
+        window.openCommunityMap();
+        // document.getElementById('modal-escort-setup').classList.remove('hidden');
         document.getElementById('escort-estimates').classList.add('hidden');
         document.getElementById('btn-start-escort').classList.add('hidden');
     }
@@ -20,18 +22,19 @@ class VirtualEscort {
     // 2. User Picks Destination
     pickDestinationOnMap() {
         document.getElementById('modal-escort-setup').classList.add('hidden');
-        window.openCommunityMap(); // Opens Safety Map
+        // window.openCommunityMap(); // Opens Safety Map
         window.isEscortSetupMode = true; // Flag for map.js
         alert("Tap destination on map.");
     }
 
     // 3. Receive Estimates from Map
     updateEstimates(seconds, destLatLng) {
+        console.log('UPDATE ESTIMATES CALLED', seconds, destLatLng)
         this.destinationLatLng = destLatLng; 
         
         document.getElementById('modal-escort-setup').classList.remove('hidden');
         // Keep map open in background
-        window.isEscortSetupMode = false;
+        // window.isEscortSetupMode = false;
 
         const minutes = Math.ceil(seconds / 60);
         const buffer = 5; 
@@ -44,10 +47,19 @@ class VirtualEscort {
         document.getElementById('btn-start-escort').classList.remove('hidden');
         
         this.totalDurationMs = total * 60 * 1000;
+
+        const slideup = document.getElementById('escort-slideup')
+        slideup.classList.remove('hidden')
+        slideup.classList.add('visible')
+        console.log('updateEstimates called')
     }
 
     // 4. Start Journey (ROBUST VERSION)
     startJourney() {
+        window.isEscortSetupMode = false;
+        const slideup = document.getElementById('escort-slideup')
+    slideup.classList.remove('visible')
+    slideup.classList.add('hidden')
         // UI Updates
         document.getElementById('modal-escort-setup').classList.add('hidden');
         document.getElementById('escort-active-overlay').classList.remove('hidden'); 
@@ -179,3 +191,12 @@ class VirtualEscort {
 
 const virtualEscort = new VirtualEscort();
 window.virtualEscort = virtualEscort;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('btn-start-escort-slideup')
+    if (!btn) return
+
+    btn.addEventListener('click', () => {
+        virtualEscort.startJourney()
+    })
+})

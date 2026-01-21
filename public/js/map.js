@@ -33,7 +33,7 @@ window.openCommunityMap = function() {
         window.map = new maplibregl.Map({
             container: 'map',
             style: STYLE_DARK, 
-            center: [27.6014, 47.1585], // Iași
+            center: [47.15731060814983, 27.586864162286588], // Iași
             zoom: 15,
             pitch: 45,
             attributionControl: false
@@ -262,12 +262,14 @@ window.openVictimTrackingMap = function(guardianData) {
 // --- LOGICA RUTARE (OSRM) ---
 async function drawRoute(start, end, profile) {
     // start/end sunt [lng, lat]
+    console.log('DRAW ROUTE CALLED', start, end)
     const osrmProfile = profile === 'walking' ? 'foot' : 'car';
     const url = `https://router.project-osrm.org/route/v1/${osrmProfile}/${start[0]},${start[1]};${end[0]},${end[1]}?overview=full&geometries=geojson`;
     
     try {
         const res = await fetch(url);
         const json = await res.json();
+        console.log('OSRM RESPONSE', json)
         
         if (!json.routes || json.routes.length === 0) return;
         
@@ -297,8 +299,10 @@ async function drawRoute(start, end, profile) {
 
         // 2. IMPORTANT: Trimitem datele înapoi la Escort UI
         // Verificăm dacă suntem în modul de setare (flag-ul din escort.js)
+        console.log('isEscortSetupMode BEFORE CHECK', window.isEscortSetupMode)
         if (window.isEscortSetupMode && window.virtualEscort) {
             console.log("✅ Sending estimates to Escort Module:", durationSeconds);
+            console.log('isEscortSetupMode', window.isEscortSetupMode)
             window.virtualEscort.updateEstimates(durationSeconds, { lat: end[1], lng: end[0] });
         }
 
