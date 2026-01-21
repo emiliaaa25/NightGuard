@@ -68,6 +68,9 @@ if (window.socket) {
 
     // --- SOS ALERT ---
     window.socket.on('emergency_alert', (data) => {
+        // Store alert data globally for acceptance
+        window.currentAlertData = data;
+        
         const modal = document.getElementById('guardian-alert-modal');
         if(modal) {
             modal.classList.remove('hidden');
@@ -75,17 +78,143 @@ if (window.socket) {
             const nameEl = document.getElementById('alert-victim-name');
             if(nameEl) nameEl.textContent = data.victimName || "Unknown";
         }
+        
+        if(navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+    });
+
+    // --- GUARDIAN COMING (Victim receives this) ---
+    window.socket.on('guardian_coming', (data) => {
+        console.log("✅ Guardian accepted! Help is coming:", data);
+        
+        // Store tracking info globally
+        window.activeRescue = {
+            alertId: data.alertId,
+            guardianId: data.guardianId,
+            guardianName: data.guardianName,
+            trackingRoom: data.trackingRoom
+        };
+        
+        // Join tracking room
+        if (window.socket) {
+            window.socket.emit('join_tracking_room', { alertId: data.alertId });
+        }
+        
+        // Show "Help is on the way" UI
+        if (window.showHelpIsComingUI) {
+            window.showHelpIsComingUI(data);
+        }
+        
+        if(navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
+    });
+    
+    // --- RESCUE MISSION STARTED (Guardian receives this) ---
+    window.socket.on('rescue_mission_started', (data) => {
+        console.log("🚨 Rescue mission confirmed:", data);
+        
+        // Store rescue info globally
+        window.activeRescue = {
+            alertId: data.alertId,
+            victimId: data.victimId,
+            trackingRoom: data.trackingRoom
+        };
+        
+        // Join tracking room
+        if (window.socket) {
+            window.socket.emit('join_tracking_room', { alertId: data.alertId });
+        }
+        
+        // Start location tracking for guardian
+        if (window.startGuardianLocationTracking) {
+            window.startGuardianLocationTracking(data.alertId);
+        }
+    });
+    
+    // --- GUARDIAN LOCATION UPDATE (Victim sees guardian moving) ---
+    window.socket.on('update_guardian_location', (data) => {
+        console.log("📍 Guardian location update:", data);
+        
+        if (window.updateGuardianMarkerOnMap) {
+            window.updateGuardianMarkerOnMap(data.lat, data.lng);
+        }
+    });
+    
+    // --- VICTIM LOCATION UPDATE (Guardian sees victim moving) ---
+    window.socket.on('update_victim_location', (data) => {
+        console.log("📍 Victim location update:", data);
+        
+        if (window.updateVictimMarkerOnMap) {
+            window.updateVictimMarkerOnMap(data.lat, data.lng);
+        }
+    });
+    
+    // --- VICTIM MARKED SAFE (Guardian receives this) ---
+    window.socket.on('victim_marked_safe', (data) => {
+        console.log("✅ Victim is safe:", data);
+        
+        alert(`Good news! The victim is now safe and has ended the emergency alert.`);
+        
+        // Stop guardian location tracking
+        if (window.stopGuardianLocationTracking) {
+            window.stopGuardianLocationTracking();
+        }
+        
+        // Close map after a moment
+        setTimeout(() => {
+            if (window.closeMap) {
+                window.closeMap();
+            }
+        }, 2000);
+    });
+    
+    // --- VICTIM STOPPED RECORDING (Guardian receives this) ---
+    window.socket.on('victim_recording_stopped_notification', (data) => {
+        console.log("⏹️ Victim stopped recording:", data);
+        
+        // Show notification but don't disrupt rescue operation
+        if (Notification.permission === 'granted') {
+            new Notification('Recording Stopped', {
+                body: 'Victim stopped recording but emergency is still active',
+                icon: '/images/logo.png'
+            });
+        }
     });
 }
 
 // Helpers
 window.acceptAlert = function() {
-    document.getElementById('guardian-alert-modal').style.display = 'none';
-    if (window.currentAlertData && window.currentAlertData.location && window.startRescueMission) {
-        window.startRescueMission(window.currentAlertData.location.lat, window.currentAlertData.location.lng);
+    const modal = document.getElementById('guardian-alert-modal');
+    if (modal) modal.style.display = 'none';
+    
+    if (!window.currentAlertData) {
+        console.error("No alert data available");
+        return;
+    }
+    
+    // Extract victim ID from alert data
+    // We need to modify the backend to send victimId in the alert
+    const alertId = window.currentAlertData.alertId;
+    const victimLocation = window.currentAlertData.location;
+    
+    // We need to extract victimId - let's get it from the alert
+    // For now, we'll emit with the data we have and let backend handle it
+    if (window.socket && window.currentUserId) {
+        // Send acceptance to backend
+        window.socket.emit('guardian_accept_alert', {
+            alertId: alertId,
+            victimId: window.currentAlertData.victimId || null
+        });
+        
+        console.log("✅ Guardian accepted alert:", alertId);
+    }
+    
+    // Start rescue mission on map
+    if (victimLocation && window.startRescueMission) {
+        window.startRescueMission(victimLocation.lat, victimLocation.lng);
     }
 };
 
 window.ignoreAlert = function() {
-    document.getElementById('guardian-alert-modal').style.display = 'none';
+    const modal = document.getElementById('guardian-alert-modal');
+    if (modal) modal.style.display = 'none';
+    window.currentAlertData = null;
 };

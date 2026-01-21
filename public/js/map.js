@@ -166,6 +166,99 @@ window.startRescueMission = function(victimLat, victimLng) {
     }, 200);
 }
 
+// 4. VICTIM TRACKING MAP (New - victim sees guardian)
+window.openVictimTrackingMap = function(guardianData) {
+    // Don't call setupUI - directly manage the map overlay
+    const mapOverlay = document.getElementById('map-overlay');
+    if (!mapOverlay) {
+        console.error("Map overlay not found");
+        return;
+    }
+    
+    mapOverlay.classList.remove('hidden');
+    mapOverlay.style.display = 'flex';
+    
+    const mapTitle = document.getElementById('map-title');
+    if (mapTitle) {
+        mapTitle.innerHTML = '🛡️ GUARDIAN TRACKING';
+        mapTitle.style.color = '#10b981';
+    }
+    
+    const routeControls = document.getElementById('route-controls');
+    if (routeControls) {
+        routeControls.classList.add('hidden');
+    }
+    
+    // Add close button
+    let closeBtn = document.getElementById('map-close-btn');
+    if (!closeBtn) {
+        closeBtn = document.createElement('button');
+        closeBtn.id = 'map-close-btn';
+        closeBtn.innerHTML = '<i class="ph-fill ph-x"></i>';
+        closeBtn.onclick = window.closeMap;
+        closeBtn.style.cssText = `
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            background: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        mapOverlay.appendChild(closeBtn);
+    }
+    closeBtn.style.display = 'flex';
+
+    setTimeout(() => {
+        resetMapGlobals();
+        window.map = new maplibregl.Map({
+            container: 'map',
+            style: STYLE_DARK,
+            center: [guardianData.guardianLocation.lng, guardianData.guardianLocation.lat],
+            zoom: 15,
+            pitch: 0
+        });
+
+        window.map.on('load', () => {
+            window.map.resize();
+            
+            // Marker Guardian (initial position)
+            const guardianEl = document.createElement('div');
+            guardianEl.innerHTML = '<i class="ph-fill ph-shield-check" style="color:#10b981; font-size:32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"></i>';
+            
+            window.guardianTrackingMarker = new maplibregl.Marker({ 
+                element: guardianEl,
+                anchor: 'center'
+            })
+            .setLngLat([guardianData.guardianLocation.lng, guardianData.guardianLocation.lat])
+            .addTo(window.map);
+
+            // My location (victim)
+            locateUser((myLat, myLng) => {
+                updateMyMarker(myLat, myLng);
+                
+                // Draw line between victim and guardian
+                updateTrackingLine();
+                
+                // Fit both markers in view
+                const bounds = new maplibregl.LngLatBounds();
+                bounds.extend([guardianData.guardianLocation.lng, guardianData.guardianLocation.lat]);
+                bounds.extend([myLng, myLat]);
+                window.map.fitBounds(bounds, { padding: 100, maxZoom: 15 });
+            });
+        });
+    }, 200);
+}
+
+
 // --- LOGICA RUTARE (OSRM) ---
 async function drawRoute(start, end, profile) {
     // start/end sunt [lng, lat]
@@ -265,10 +358,28 @@ function locateUser(cb) {
 }
 
 window.closeMap = function() { 
-    document.getElementById('map-overlay').style.display = 'none';
-    if(window.location.search.includes('watch') || document.getElementById('map-title').innerText.includes("LIVE")) {
+    const mapOverlay = document.getElementById('map-overlay');
+    if (mapOverlay) {
+        mapOverlay.style.display = 'none';
+    }
+    
+    // If we're in guardian view mode, restore the rescue actions
+    if (window.inGuardianViewMode && window.savedRescueActionsHTML) {
+        console.log("Restoring rescue actions...");
+        const card = document.querySelector('.panic-card');
+        const panicContent = card ? card.querySelector('.panic-content') : null;
+        if (panicContent) {
+            panicContent.innerHTML = window.savedRescueActionsHTML;
+        }
+    }
+    
+    // Only reload if we're in watch mode or live tracking, NOT in guardian view mode
+    if ((window.location.search.includes('watch') || document.getElementById('map-title')?.innerText.includes("LIVE")) && !window.inGuardianViewMode) {
         window.location.reload();
     }
+    
+    // Clear guardian view mode flag
+    window.inGuardianViewMode = false;
 }
 
 // ==========================================
@@ -378,5 +489,124 @@ async function loadHazards() {
         }
     } catch(e) { 
         console.error("❌ Error loading hazards:", e); 
+    }
+}
+
+// === BIDIRECTIONAL TRACKING: MARKER UPDATES ===
+
+// For VICTIM: Update guardian's marker position on the map
+window.updateGuardianMarkerOnMap = function(lat, lng) {
+    if (!window.map) {
+        console.warn("Map not initialized for guardian marker update");
+        return;
+    }
+    
+    // Create or update guardian marker
+    if (!window.guardianTrackingMarker) {
+        const el = document.createElement('div');
+        el.style.width = '32px';
+        el.style.height = '32px';
+        el.style.display = 'flex';
+        el.style.alignItems = 'center';
+        el.style.justifyContent = 'center';
+        el.innerHTML = '<i class="ph-fill ph-shield-check" style="color:#10b981; font-size:28px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"></i>';
+        
+        window.guardianTrackingMarker = new maplibregl.Marker({ 
+            element: el,
+            anchor: 'center'
+        })
+        .setLngLat([lng, lat])
+        .addTo(window.map);
+        
+        console.log("✅ Guardian marker created at:", lat, lng);
+        
+        // Auto-zoom to show both victim and guardian
+        if (window.userLat && window.userLng) {
+            const bounds = new maplibregl.LngLatBounds();
+            bounds.extend([lng, lat]);
+            bounds.extend([window.userLng, window.userLat]);
+            window.map.fitBounds(bounds, { padding: 100, maxZoom: 15 });
+        }
+    } else {
+        window.guardianTrackingMarker.setLngLat([lng, lat]);
+        console.log("📍 Guardian marker updated:", lat, lng);
+    }
+    
+    // Optional: Draw line between victim and guardian
+    updateTrackingLine();
+};
+
+// For GUARDIAN: Update victim's marker position on the map
+window.updateVictimMarkerOnMap = function(lat, lng) {
+    if (!window.map) {
+        console.warn("Map not initialized for victim marker update");
+        return;
+    }
+    
+    // Update the existing target marker if it exists
+    if (targetMarker) {
+        targetMarker.setLngLat([lng, lat]);
+        console.log("📍 Victim marker updated:", lat, lng);
+        
+        // Auto-pan map to keep victim in view
+        window.map.panTo([lng, lat], { duration: 1000 });
+    } else {
+        // Create victim marker if it doesn't exist
+        const el = document.createElement('div');
+        el.style.width = '24px';
+        el.style.height = '24px';
+        el.style.backgroundColor = 'red';
+        el.style.borderRadius = '50%';
+        el.style.border = '4px solid white';
+        el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+        
+        targetMarker = new maplibregl.Marker({ element: el })
+            .setLngLat([lng, lat])
+            .addTo(window.map);
+        
+        console.log("✅ Victim marker created at:", lat, lng);
+    }
+    
+    // Update route if both positions are known
+    if (window.userLat && window.userLng) {
+        drawRoute([window.userLng, window.userLat], [lng, lat], 'driving');
+    }
+};
+
+// Helper: Draw line connecting victim and guardian
+function updateTrackingLine() {
+    if (!window.guardianTrackingMarker || !window.userLat || !window.userLng) return;
+    
+    const guardianPos = window.guardianTrackingMarker.getLngLat();
+    
+    const lineData = {
+        type: 'Feature',
+        geometry: {
+            type: 'LineString',
+            coordinates: [
+                [window.userLng, window.userLat],
+                [guardianPos.lng, guardianPos.lat]
+            ]
+        }
+    };
+    
+    if (window.map.getSource('tracking-line')) {
+        window.map.getSource('tracking-line').setData(lineData);
+    } else {
+        window.map.addSource('tracking-line', {
+            type: 'geojson',
+            data: lineData
+        });
+        
+        window.map.addLayer({
+            id: 'tracking-line',
+            type: 'line',
+            source: 'tracking-line',
+            paint: {
+                'line-color': '#10b981',
+                'line-width': 3,
+                'line-dasharray': [2, 2]
+            }
+        });
     }
 }
