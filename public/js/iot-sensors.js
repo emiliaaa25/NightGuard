@@ -103,6 +103,13 @@ class NightGuardIoT {
         const btn = document.getElementById('btn-panic');
         const card = document.querySelector('.panic-card');
 
+        // Don't trigger new alert if we're already in rescue mode
+        if (window.activeRescue && window.activeRescue.alertId) {
+            console.warn("⚠️ Already in rescue mode with alert:", window.activeRescue.alertId);
+            console.warn("⚠️ Not triggering new panic - use existing alert");
+            return;
+        }
+
         if (this.isRecording) {
             this.stopEmergency();
             return;
@@ -112,7 +119,7 @@ class NightGuardIoT {
         if(navigator.vibrate) navigator.vibrate([300, 100, 300]);
 
         if (card) {
-            card.classList.add('is-recording'); 
+            card.classList.add('is-recording');
             const title = card.querySelector('h3');
             const subtitle = card.querySelector('p');
             if(title) title.innerText = "RECORDING EVIDENCE...";
@@ -139,6 +146,14 @@ class NightGuardIoT {
                     if(res.ok) {
                         this.currentAlertId = data.alertId;
                         console.log("SOS Alert Sent");
+                        
+                        // Store alert ID globally for tracking
+                        window.currentSOSAlertId = data.alertId;
+                        
+                        // Start victim location tracking
+                        if (window.startVictimLocationTracking) {
+                            window.startVictimLocationTracking(data.alertId);
+                        }
                     }
                 } catch(e) { console.error(e); }
             },
@@ -168,6 +183,12 @@ class NightGuardIoT {
     }
 
     stopEmergency() {
+        // Don't trigger if we're in guardian view mode
+        if (window.inGuardianViewMode) {
+            console.log("⚠️ Cannot stop emergency while viewing guardian map");
+            return;
+        }
+        
         if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
             this.mediaRecorder.stop();
             this.mediaRecorder.stream.getTracks().forEach(t => t.stop());
@@ -179,6 +200,12 @@ class NightGuardIoT {
     }
 
     resetUI() {
+        // Don't reset if we're in guardian view mode
+        if (window.inGuardianViewMode) {
+            console.log("⚠️ Skipping resetUI in guardian view mode");
+            return;
+        }
+        
         const btn = document.getElementById('btn-panic');
         const card = document.querySelector('.panic-card');
         if (card) {
@@ -202,3 +229,293 @@ class NightGuardIoT {
 }
 
 const nightGuardIoT = new NightGuardIoT();
+
+// === VICTIM UI: "HELP IS ON THE WAY" ===
+window.showHelpIsComingUI = function(data) {
+    const card = document.querySelector('.panic-card');
+    
+    if (!card) return;
+    
+    // Store data globally for tracking
+    window.guardianTrackingData = data;
+    
+    // Update the panic card to show help is coming
+    card.classList.add('help-coming');
+    card.classList.remove('is-recording');
+    
+    const title = card.querySelector('h3');
+    const subtitle = card.querySelector('p');
+    
+    if (title) {
+        title.innerText = "HELP IS ON THE WAY";
+    }
+    
+    if (subtitle) {
+        subtitle.innerHTML = `Guardian <strong>${data.guardianName}</strong> is coming<br>` +
+                           `<span style="font-weight: 700;">ETA: ${data.eta} minutes</span>`;
+    }
+    
+    // Replace card content with large action buttons
+    const panicContent = card.querySelector('.panic-content');
+    if (panicContent) {
+        const actionsHTML = `
+            <div id="rescue-actions" style="display: grid; grid-template-columns: 1fr; gap: 12px; width: 100%; margin-top: 20px;">
+                <button onclick="window.viewGuardianOnMap()" class="rescue-action-btn rescue-btn-map">
+                    <div class="rescue-btn-icon"><i class="ph-fill ph-map-pin"></i></div>
+                    <div class="rescue-btn-text">
+                        <div class="rescue-btn-title">View Location</div>
+                        <div class="rescue-btn-desc">See where guardian is</div>
+                    </div>
+                </button>
+                <button onclick="window.stopRecordingOnly()" class="rescue-action-btn rescue-btn-stop">
+                    <div class="rescue-btn-icon"><i class="ph-fill ph-stop-circle"></i></div>
+                    <div class="rescue-btn-text">
+                        <div class="rescue-btn-title">Stop Recording</div>
+                        <div class="rescue-btn-desc">Alert stays active</div>
+                    </div>
+                </button>
+                <button onclick="window.markAsSafe()" class="rescue-action-btn rescue-btn-safe">
+                    <div class="rescue-btn-icon"><i class="ph-fill ph-check-circle"></i></div>
+                    <div class="rescue-btn-text">
+                        <div class="rescue-btn-title">I'm Safe!</div>
+                        <div class="rescue-btn-desc">End emergency</div>
+                    </div>
+                </button>
+            </div>
+        `;
+        panicContent.innerHTML = actionsHTML;
+        window.savedRescueActionsHTML = actionsHTML;
+    }
+    
+    // Vibrate to notify
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    
+    // Show notification
+    if (Notification.permission === 'granted') {
+        new Notification('Help is Coming!', {
+            body: `Guardian ${data.guardianName} is on the way. ETA: ${data.eta} minutes`,
+            icon: '/images/logo.png'
+        });
+    }
+};
+
+// === VICTIM LOCATION TRACKING ===
+let victimLocationInterval = null;
+
+window.startVictimLocationTracking = function(alertId) {
+    console.log("📍 Starting victim location tracking for alert:", alertId);
+    
+    // Clear any existing interval
+    if (victimLocationInterval) {
+        clearInterval(victimLocationInterval);
+    }
+    
+    // Send location every 5 seconds
+    victimLocationInterval = setInterval(() => {
+        if (navigator.geolocation && window.socket) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const { latitude, longitude } = pos.coords;
+                    window.socket.emit('victim_location_update', {
+                        alertId: alertId,
+                        lat: latitude,
+                        lng: longitude
+                    });
+                    console.log(`📍 Victim location sent: ${latitude}, ${longitude}`);
+                },
+                (err) => console.warn("GPS error:", err),
+                { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+            );
+        }
+    }, 5000);
+};
+
+window.stopVictimLocationTracking = function() {
+    if (victimLocationInterval) {
+        clearInterval(victimLocationInterval);
+        victimLocationInterval = null;
+        console.log("🛑 Stopped victim location tracking");
+    }
+};
+
+// === GUARDIAN LOCATION TRACKING ===
+let guardianLocationInterval = null;
+
+window.startGuardianLocationTracking = function(alertId) {
+    console.log("📍 Starting guardian location tracking for alert:", alertId);
+    
+    // Clear any existing interval
+    if (guardianLocationInterval) {
+        clearInterval(guardianLocationInterval);
+    }
+    
+    // Send location every 3 seconds (more frequent for guardian)
+    guardianLocationInterval = setInterval(() => {
+        if (navigator.geolocation && window.socket) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const { latitude, longitude } = pos.coords;
+                    window.socket.emit('guardian_location_update', {
+                        alertId: alertId,
+                        lat: latitude,
+                        lng: longitude
+                    });
+                    console.log(`📍 Guardian location sent: ${latitude}, ${longitude}`);
+                },
+                (err) => console.warn("GPS error:", err),
+                { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+            );
+        }
+    }, 3000);
+};
+
+window.stopGuardianLocationTracking = function() {
+    if (guardianLocationInterval) {
+        clearInterval(guardianLocationInterval);
+        guardianLocationInterval = null;
+        console.log("🛑 Stopped guardian location tracking");
+    }
+};
+
+// === VICTIM ACTION BUTTONS ===
+
+// 1. View Guardian on Map
+window.viewGuardianOnMap = function() {
+    if (!window.guardianTrackingData) {
+        alert("No guardian tracking data available");
+        return;
+    }
+    
+    // Save current state so we don't lose it
+    window.inGuardianViewMode = true;
+    
+    // Store rescue actions container to restore it later
+    const rescueActions = document.getElementById('rescue-actions');
+    if (rescueActions) {
+        window.savedRescueActionsHTML = rescueActions.outerHTML;
+    }
+    
+    console.log("📍 Opening guardian location map...");
+    
+    // Open tracking map mode for victim
+    if (window.openVictimTrackingMap) {
+        window.openVictimTrackingMap(window.guardianTrackingData);
+    } else {
+        alert("Map feature loading...");
+    }
+};
+
+// 2. Stop Recording Only (keep alert active)
+window.stopRecordingOnly = function() {
+    console.log("⏹️ Stopping recording...");
+    
+    // Make sure we're in rescue mode
+    if (!window.activeRescue || !window.activeRescue.alertId) {
+        console.warn("⚠️ Not in rescue mode - cannot stop recording");
+        return;
+    }
+    
+    if (nightGuardIoT.isRecording && nightGuardIoT.mediaRecorder) {
+        nightGuardIoT.mediaRecorder.stop();
+        nightGuardIoT.mediaRecorder.stream.getTracks().forEach(t => t.stop());
+        nightGuardIoT.isRecording = false;
+        
+        // Notify guardian that recording stopped
+        if (window.socket && window.activeRescue && window.activeRescue.alertId) {
+            console.log("📢 Notifying guardian - recording stopped. AlertId:", window.activeRescue.alertId);
+            window.socket.emit('victim_recording_stopped', {
+                alertId: window.activeRescue.alertId
+            });
+        } else {
+            console.warn("⚠️ Cannot notify guardian - no activeRescue or alertId");
+        }
+        
+        // Update button to show recording stopped
+        const stopBtn = document.querySelector('.rescue-btn-stop');
+        if (stopBtn) {
+            stopBtn.innerHTML = `
+                <div class="rescue-btn-icon"><i class="ph-fill ph-check"></i></div>
+                <div class="rescue-btn-text">
+                    <div class="rescue-btn-title">Recording Stopped</div>
+                    <div class="rescue-btn-desc">Alert stays active</div>
+                </div>
+            `;
+            stopBtn.style.opacity = '0.6';
+            stopBtn.disabled = true;
+            stopBtn.onclick = null;
+        }
+        
+        alert("Recording stopped. Evidence uploaded.");
+    } else {
+        alert("No active recording.");
+    }
+};
+
+// 3. Mark as Safe (end alert)
+window.markAsSafe = function() {
+    // Don't trigger if we're viewing map
+    if (window.inGuardianViewMode) {
+        console.log("⚠️ Cannot mark as safe while viewing map");
+        return;
+    }
+    
+    // Make sure we're in rescue mode
+    if (!window.activeRescue || !window.activeRescue.alertId) {
+        console.warn("⚠️ Not in rescue mode - cannot mark as safe");
+        return;
+    }
+    
+    const confirmed = confirm("Are you safe now? This will end the emergency alert.");
+    if (!confirmed) return;
+    
+    console.log("✅ Marking victim as safe...");
+    
+    // Stop all tracking
+    window.stopVictimLocationTracking();
+    
+    // Stop recording if active (don't call function, do it directly)
+    if (nightGuardIoT.isRecording) {
+        nightGuardIoT.mediaRecorder.stop();
+        nightGuardIoT.mediaRecorder.stream.getTracks().forEach(t => t.stop());
+        nightGuardIoT.isRecording = false;
+    }
+    
+    // Update alert status to resolved via socket
+    if (window.socket && window.activeRescue && window.activeRescue.alertId) {
+        console.log("📢 Notifying guardian - victim is safe. AlertId:", window.activeRescue.alertId);
+        window.socket.emit('victim_safe', { 
+            alertId: window.activeRescue.alertId 
+        });
+    } else if (window.currentSOSAlertId && window.socket) {
+        console.log("📢 Notifying guardian - victim is safe (fallback). AlertId:", window.currentSOSAlertId);
+        window.socket.emit('victim_safe', { 
+            alertId: window.currentSOSAlertId 
+        });
+    } else {
+        console.warn("⚠️ Cannot notify guardian - no activeRescue or currentSOSAlertId");
+    }
+    
+    // Reset UI
+    const card = document.querySelector('.panic-card');
+    if (card) {
+        card.classList.remove('help-coming', 'is-recording');
+        card.innerHTML = `
+            <div class="panic-bg-effect"></div>
+            <div class="panic-content">
+                <div class="panic-icon-lg"><i class="ph-fill ph-check-circle"></i></div>
+                <div style="text-align: center;">
+                    <h3 style="color: #10b981;">YOU'RE SAFE!</h3>
+                    <p>Emergency ended successfully</p>
+                </div>
+                <div id="btn-panic" class="status-pill" style="background: #10b981;">SAFE</div>
+            </div>
+        `;
+        
+        // Reset after 3 seconds
+        setTimeout(() => {
+            location.reload();
+        }, 3000);
+    }
+    
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 100]);
+};
