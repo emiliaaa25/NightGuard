@@ -204,7 +204,7 @@ input, textarea { font-family: inherit; color: var(--text-main); }
     #guardian-controls-mobile {
         margin-bottom: 24px;
         padding-bottom: 10px;
-        border-bottom: 1px solid rgba(0,0,0,0.05); /* Separator subtil */
+        border-bottom: 1px solid rgba(0,0,0,0.05); 
     }
 
     .stats-row, .content-grid { 
