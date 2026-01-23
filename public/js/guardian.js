@@ -47,7 +47,6 @@ window.initGuardianLogic = async function() {
         if (role === 'SECURITY' || role === 'ADMIN' || role === 'POLICE') {
             
             if(guardianContainer) {
-                // Generăm HTML-ul
                 guardianContainer.innerHTML = `
                     <div id="guardianWrapper" class="guardian-toggle-wrapper">
                          <span id="guardianLabel" class="guardian-label">OFF DUTY</span>
@@ -58,7 +57,6 @@ window.initGuardianLogic = async function() {
                     </div>
                 `;
                 
-                // === FIX: MUTĂM PE MOBIL DACĂ E CAZUL ===
                 moveSwitchToMobileIfNeeded(); 
             }
 
@@ -66,13 +64,11 @@ window.initGuardianLogic = async function() {
             const wrapper = document.getElementById('guardianWrapper');
             const label = document.getElementById('guardianLabel');
 
-            // Setăm starea inițială
             if (user.is_guardian && toggle) {
                 toggle.checked = true;
                 updateVisuals(true);
             }
 
-            // Event Listener
             if(toggle) {
                 toggle.addEventListener('change', async (e) => {
                     const isChecked = e.target.checked;
@@ -96,21 +92,17 @@ window.initGuardianLogic = async function() {
     } catch (e) { console.error(e); }
 }
 
-// === FUNCȚIE NOUĂ: Mută switch-ul în containerul vizibil pe mobil ===
 function moveSwitchToMobileIfNeeded() {
     const desktopContainer = document.getElementById('guardian-controls-container');
     const mobileContainer = document.getElementById('guardian-controls-mobile');
     
-    // Dacă suntem pe un ecran mic (sub 768px)
     if (window.innerWidth < 768 && desktopContainer && mobileContainer) {
-        // Mutăm tot conținutul din Desktop în Mobile
         while (desktopContainer.firstChild) {
             mobileContainer.appendChild(desktopContainer.firstChild);
         }
     }
 }
 
-// Funcție Update Vizual
 function updateVisuals(isActive) {
     const wrapper = document.getElementById('guardianWrapper');
     const label = document.getElementById('guardianLabel');
@@ -139,7 +131,6 @@ function updateVisuals(isActive) {
     }
 }
 
-// --- Helpers ---
 window.openApplyModal = function() { 
     const modal = document.getElementById('modal-apply');
     if(modal) { modal.classList.remove('hidden'); modal.style.display = 'flex'; }
@@ -214,5 +205,4 @@ async function sendLocationUpdate() {
     });
 }
 
-// Handler pentru Resize (ca să nu dispară butonul dacă întorci telefonul)
 window.addEventListener('resize', moveSwitchToMobileIfNeeded);

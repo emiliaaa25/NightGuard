@@ -1,17 +1,14 @@
-// === MAPLIBRE GL JS (CLICK & ROUTING FIX) ===
-
-// PUNE CHEIA AICI
 const API_KEY = '7GsswGN4WfdFNk3pJAeV'; 
 
 window.map = null;
 let guardianMarker = null;
 let targetMarker = null;
-let destinationMarker = null; // Marker nou pentru destinația aleasă
+let destinationMarker = null; 
 
 const STYLE_DARK = `https://api.maptiler.com/maps/ch-swisstopo-lbm-dark/style.json?key=${API_KEY}`; 
 const STYLE_SAT = `https://api.maptiler.com/maps/satellite/style.json?key=${API_KEY}`;
 
-// --- RESETARE ---
+// RESETARE 
 function resetMapGlobals() {
     // Stop location tracking
     stopLocationTracking();
@@ -31,16 +28,9 @@ function resetMapGlobals() {
         window.routeStartMarker.remove();
         window.routeStartMarker = null;
     }
-    
-    // Optionally keep user location for faster re-initialization
-    // Uncomment if you want to reset location too:
-    // window.userLat = null;
-    // window.userLng = null;
-    
-    console.log("🧹 Map cleaned.");
 }
 
-// 1. SAFETY MAP (Aici facem setarea destinației)
+// 1. SAFETY MAP 
 window.openCommunityMap = function() {
     setupUI('Safe Navigation');
     
@@ -69,10 +59,9 @@ window.openCommunityMap = function() {
                 window.map.flyTo({ center: [lng, lat], zoom: 16 });
                 updateRouteStatus("✓ Location found. Enter destination or tap map.");
                 
-                // Start continuous location tracking for better accuracy
+                //continuous location tracking
                 startLocationTracking();
                 
-                // Update "My Location" field with address
                 reverseGeocode(lng, lat).then(placeName => {
                     const routeStartInput = document.getElementById('route-start');
                     if (routeStartInput && placeName) {
@@ -85,7 +74,7 @@ window.openCommunityMap = function() {
                 console.error("Location error:", error);
                 updateRouteStatus("⚠️ Location access denied. Click 'My Location' to try again.");
                 
-                // Make "My Location" field clickable to retry
+                // My Location field clickable 
                 const routeStartInput = document.getElementById('route-start');
                 if (routeStartInput) {
                     routeStartInput.value = "Tap to get location";
@@ -115,24 +104,20 @@ window.openCommunityMap = function() {
                 }
             });
             
-            // Setup address search functionality
             setupAddressSearch();
         });
         
 
-        // --- ASCULTĂTORUL DE CLICK (CRITIC) ---
         window.map.on('click', (e) => {
             const clickedLat = e.lngLat.lat;
             const clickedLng = e.lngLat.lng;
 
             console.log("🖱️ Map Clicked:", clickedLat, clickedLng);
 
-            // Verificăm dacă știm unde suntem noi (punctul de start)
             if (!window.userLat || !window.userLng) {
                 updateRouteStatus("⏳ Getting your location...");
                 locateUser((lat, lng) => {
                     updateMyMarker(lat, lng);
-                    // Continue with the click handler after location is obtained
                     updateDestinationMarker(clickedLat, clickedLng);
                     reverseGeocode(clickedLng, clickedLat).then(placeName => {
                         const routeDestInput = document.getElementById('route-dest');
@@ -152,12 +137,8 @@ window.openCommunityMap = function() {
                 return;
             }
 
-            // Dacă suntem în modul de setare Escortă sau doar explorăm
             if (!window.isEscortActive) {
-                // 1. Punem un pin unde am dat click
                 updateDestinationMarker(clickedLat, clickedLng);
-
-                // 2. Optionally reverse geocode to update input field
                 reverseGeocode(clickedLng, clickedLat).then(placeName => {
                     const routeDestInput = document.getElementById('route-dest');
                     if (routeDestInput && placeName) {
@@ -165,7 +146,6 @@ window.openCommunityMap = function() {
                     }
                 });
 
-                // 3. Get start location (custom or GPS) and calculate route
                 const startLoc = getStartLocation();
                 if (!startLoc) {
                     updateRouteStatus("⏳ Getting your location...");
@@ -225,7 +205,6 @@ window.startWatchingMode = function(targetUserId) {
                 if (!targetMarker) {
                     const el = document.createElement('div');
                     el.className = 'victim-marker'; 
-                    // Stiluri inline backup
                     el.style.width = '24px'; el.style.height = '24px';
                     el.style.backgroundColor = '#ef4444'; el.style.borderRadius = '50%';
                     el.style.border = '4px solid white'; el.style.boxShadow = '0 0 20px #ef4444';
@@ -278,9 +257,8 @@ window.startRescueMission = function(victimLat, victimLng) {
     }, 200);
 }
 
-// 4. VICTIM TRACKING MAP (New - victim sees guardian)
+// 4. VICTIM TRACKING MAP 
 window.openVictimTrackingMap = function(guardianData) {
-    // Don't call setupUI - directly manage the map overlay
     const mapOverlay = document.getElementById('map-overlay');
     if (!mapOverlay) {
         console.error("Map overlay not found");
@@ -342,7 +320,7 @@ window.openVictimTrackingMap = function(guardianData) {
         window.map.on('load', () => {
             window.map.resize();
             
-            // Marker Guardian (initial position)
+            // Marker Guardian 
             const guardianEl = document.createElement('div');
             guardianEl.innerHTML = '<i class="ph-fill ph-shield-check" style="color:#10b981; font-size:32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"></i>';
             
@@ -353,7 +331,7 @@ window.openVictimTrackingMap = function(guardianData) {
             .setLngLat([guardianData.guardianLocation.lng, guardianData.guardianLocation.lat])
             .addTo(window.map);
 
-            // My location (victim)
+            // victim
             locateUser((myLat, myLng) => {
                 updateMyMarker(myLat, myLng);
                 
@@ -371,18 +349,13 @@ window.openVictimTrackingMap = function(guardianData) {
 }
 
 
-// --- LOGICA RUTARE (OSRM) ---
+//  LOGICA RUTARE (OSRM) 
 async function drawRoute(start, end, profile) {
     // start/end sunt [lng, lat]
     console.log('DRAW ROUTE CALLED', start, end)
     const osrmProfile = profile === 'walking' ? 'foot' : 'car';
     
-    // Enhanced routing parameters for pedestrian safety:
-    // - alternatives=true: Get multiple route options
-    // - steps=true: Get turn-by-turn directions (can help identify pedestrian paths)
-    // - exclude=tollways,ferries: Avoid tolls and ferries
-    // The 'foot' profile already prioritizes pedestrian paths, sidewalks, and avoids highways
-    const url = `https://router.project-osrm.org/route/v1/${osrmProfile}/${start[0]},${start[1]};${end[0]},${end[1]}?overview=full&geometries=geojson&alternatives=true&steps=true`;
+   const url = `https://router.project-osrm.org/route/v1/${osrmProfile}/${start[0]},${start[1]};${end[0]},${end[1]}?overview=full&geometries=geojson&alternatives=true&steps=true`;
     
     try {
         const res = await fetch(url);
@@ -452,8 +425,6 @@ async function drawRoute(start, end, profile) {
             });
         }
 
-        // 2. IMPORTANT: Trimitem datele înapoi la Escort UI
-        // Verificăm dacă suntem în modul de setare (flag-ul din escort.js)
         console.log('isEscortSetupMode BEFORE CHECK', window.isEscortSetupMode)
         if (window.isEscortSetupMode && window.virtualEscort) {
             console.log("✅ Sending estimates to Escort Module:", durationSeconds);
@@ -467,14 +438,13 @@ async function drawRoute(start, end, profile) {
     }
 }
 
-// --- GEOCODING FUNCTIONALITY ---
+//GEOCODING FUNCTIONALITY 
 async function geocodeAddress(address) {
     if (!address || address.trim() === '') {
         return null;
     }
 
     try {
-        // Use MapTiler Geocoding API
         const encodedAddress = encodeURIComponent(address);
         const url = `https://api.maptiler.com/geocoding/${encodedAddress}.json?key=${API_KEY}&limit=1`;
         
@@ -497,10 +467,9 @@ async function geocodeAddress(address) {
     }
 }
 
-// --- REVERSE GEOCODING (COORDINATES TO ADDRESS) ---
+//REVERSE GEOCODING 
 async function reverseGeocode(lng, lat) {
     try {
-        // Use MapTiler Reverse Geocoding API
         const url = `https://api.maptiler.com/geocoding/${lng},${lat}.json?key=${API_KEY}&limit=1`;
         
         const res = await fetch(url);
@@ -517,7 +486,7 @@ async function reverseGeocode(lng, lat) {
     }
 }
 
-// --- SETUP ADDRESS SEARCH ---
+//  SETUP ADDRESS SEARCH 
 function setupAddressSearch() {
     const routeDestInput = document.getElementById('route-dest');
     const routeStartInput = document.getElementById('route-start');
@@ -558,14 +527,13 @@ function setupAddressSearch() {
         });
     }
 
-    // Optional: Add autocomplete on input (debounced)
+    // autocomplete on input 
     routeDestInput.addEventListener('input', (e) => {
         clearTimeout(searchTimeout);
-        // Could add autocomplete suggestions here in the future
     });
 }
 
-// --- HANDLE START LOCATION CHANGE ---
+// HANDLE START LOCATION CHANGE
 async function handleStartLocationChange() {
     const routeStartInput = document.getElementById('route-start');
     if (!routeStartInput || !routeStartInput.value.trim()) return;
@@ -615,7 +583,7 @@ async function handleStartLocationChange() {
     }
 }
 
-// --- USE GPS LOCATION FOR START ---
+//  USE GPS LOCATION FOR START 
 async function useGpsLocation() {
     const routeStartInput = document.getElementById('route-start');
     if (!routeStartInput) return;
@@ -670,9 +638,8 @@ async function useGpsLocation() {
     }
 }
 
-// --- GET CURRENT START LOCATION (GPS OR TYPED) ---
+//GET CURRENT START LOCATION
 function getStartLocation() {
-    // Priority: custom typed location > GPS location
     if (window.customStartLat && window.customStartLng) {
         return {
             lat: window.customStartLat,
@@ -692,7 +659,7 @@ function getStartLocation() {
     return null;
 }
 
-// --- CALCULATE ROUTE FROM BOTH INPUTS ---
+//  CALCULATE ROUTE FROM BOTH INPUTS 
 async function calculateRouteFromInputs() {
     const routeDestInput = document.getElementById('route-dest');
     if (!routeDestInput || !routeDestInput.value.trim()) {
@@ -734,34 +701,26 @@ async function calculateRouteFromInputs() {
         return;
     }
 
-    // Update the destination input with the found place name
     routeDestInput.value = destResult.place_name;
 
-    // Set destination marker
     updateDestinationMarker(destResult.lat, destResult.lng);
 
-    // Update start marker based on location type
     if (startLoc.isCustom) {
-        // Custom start location already has a marker from handleStartLocationChange
-        // Just ensure it's visible
         if (window.routeStartMarker) {
             window.routeStartMarker.setLngLat([startLoc.lng, startLoc.lat]);
         }
     } else {
-        // Using GPS location - update guardian marker
         if (window.userLat && window.userLng) {
             updateMyMarker(window.userLat, window.userLng);
         }
     }
 
-    // Draw route
     drawRoute(
         [startLoc.lng, startLoc.lat],
         [destResult.lng, destResult.lat],
         'walking'
     );
 
-    // Fly to show both locations
     window.map.flyTo({
         center: [destResult.lng, destResult.lat],
         zoom: 15,
@@ -769,8 +728,7 @@ async function calculateRouteFromInputs() {
     });
 }
 
-// --- SEARCH ADDRESS AND ROUTE (DEPRECATED - Use calculateRouteFromInputs instead) ---
-// Keeping for backward compatibility
+//  SEARCH ADDRESS AND ROUTE  
 async function searchAndRoute(address) {
     const routeDestInput = document.getElementById('route-dest');
     if (routeDestInput) {
@@ -779,7 +737,7 @@ async function searchAndRoute(address) {
     await calculateRouteFromInputs();
 }
 
-// --- UPDATE ROUTE STATUS ---
+//  UPDATE ROUTE STATUS 
 function updateRouteStatus(message) {
     const statusEl = document.getElementById('route-status');
     if (statusEl) {
@@ -787,7 +745,7 @@ function updateRouteStatus(message) {
     }
 }
 
-// --- HELPERS ---
+//  HELPERS 
 
 function updateMyMarker(lat, lng) {
     window.userLat = lat;
@@ -808,7 +766,6 @@ function updateMyMarker(lat, lng) {
     }
 }
 
-// Funcție nouă pentru a pune un pin unde dai click
 function updateDestinationMarker(lat, lng) {
     if (!destinationMarker) {
         const el = document.createElement('div');
@@ -830,7 +787,7 @@ function setupUI(text, color) {
     if(t) { t.innerHTML = text; if(color) t.style.color = color; }
 }
 
-// --- LOCATE USER WITH ERROR HANDLING ---
+//  LOCATE USER WITH ERROR HANDLING 
 function locateUser(cb, errorCb) {
     if(!navigator.geolocation) {
         if (errorCb) errorCb(new Error("Geolocation not supported"));
@@ -870,7 +827,7 @@ function locateUser(cb, errorCb) {
     );
     }
     
-// --- START CONTINUOUS LOCATION TRACKING (OPTIONAL) ---
+//  START CONTINUOUS LOCATION TRACKING 
 function startLocationTracking() {
     if (!navigator.geolocation || !window.map) return;
     
@@ -892,15 +849,6 @@ function startLocationTracking() {
                 window.userLat = lat;
                 window.userLng = lng;
                 updateMyMarker(lat, lng);
-                
-                // Optionally update the start input address periodically
-                // (commented out to avoid too many API calls)
-                // reverseGeocode(lng, lat).then(placeName => {
-                //     const routeStartInput = document.getElementById('route-start');
-                //     if (routeStartInput && placeName) {
-                //         routeStartInput.value = placeName;
-                //     }
-                // });
             }
         },
         (error) => {
@@ -914,7 +862,7 @@ function startLocationTracking() {
     );
     }
     
-// --- STOP LOCATION TRACKING ---
+//  STOP LOCATION TRACKING 
 function stopLocationTracking() {
     if (window.locationWatchId) {
         navigator.geolocation.clearWatch(window.locationWatchId);
@@ -935,15 +883,7 @@ window.closeMap = function() {
     // Clear guardian view mode flag
     window.inGuardianViewMode = false;
 
-// ==========================================
-// 4. HAZARD REPORTING (LIPSEA)
-// ==========================================
-// ==========================================
-// 4. HAZARD REPORTING (FINAL)
-// ==========================================
-
 window.reportCurrentLocationHazard = async function() {
-    // 1. Verificăm locația
     if (!window.userLat || !window.userLng) {
         alert("Waiting for GPS...");
         locateUser((lat, lng) => {
@@ -953,14 +893,12 @@ window.reportCurrentLocationHazard = async function() {
         return;
     }
 
-    // 2. Userul alege tipul
     const type = prompt("REPORT HAZARD:\nType one: DARK, ACCIDENT, CROWD, ANIMAL");
     if (!type) return; 
 
     const validTypes = ['DARK', 'ACCIDENT', 'CROWD', 'ANIMAL', 'ICE', 'OTHER'];
-    const finalType = type.toUpperCase(); // Facem textul mare automat
+    const finalType = type.toUpperCase(); 
 
-    // 3. Adăugăm vizual pe hartă (Instant Feedback)
     const el = document.createElement('div');
     el.innerHTML = '<i class="ph-fill ph-warning-octagon" style="color:#f59e0b; font-size:24px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);"></i>';
     
@@ -969,7 +907,6 @@ window.reportCurrentLocationHazard = async function() {
         .setPopup(new maplibregl.Popup().setHTML(`<b>${finalType}</b><br>Just reported`))
         .addTo(window.map);
 
-    // 4. TRIMITEM LA SERVER (Aceasta parte lipsea/era comentată)
     const token = localStorage.getItem("nightguard_token");
     
     try {
@@ -977,7 +914,7 @@ window.reportCurrentLocationHazard = async function() {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` // Critic: trebuie să fim logați
+                'Authorization': `Bearer ${token}` 
             },
             body: JSON.stringify({
                 type: finalType,
@@ -1003,34 +940,30 @@ window.reportCurrentLocationHazard = async function() {
     }
 };
 
-// Funcție pentru a încărca pericolele existente
 async function loadHazards() {
     const token = localStorage.getItem("nightguard_token");
-    console.log("🔄 Loading hazards from DB..."); // Debug
+    console.log("🔄 Loading hazards from DB..."); 
 
     try {
         const res = await fetch('/api/iot/safety-map', { headers: { 'Authorization': `Bearer ${token}` }});
         const data = await res.json();
         
-        console.log("📦 Hazards Received:", data.hazards); // Vezi aici dacă primești datele
+        console.log("📦 Hazards Received:", data.hazards); 
 
         if(data.hazards && window.map) {
             data.hazards.forEach(h => {
-                // 1. Creăm elementul vizual
                 const el = document.createElement('div');
-                el.className = 'hazard-marker'; // Folosim o clasă CSS
+                el.className = 'hazard-marker'; 
                 el.innerHTML = '<i class="ph-fill ph-warning-octagon" style="color:#f59e0b; font-size:24px;"></i>';
                 el.style.width = '24px';
                 el.style.height = '24px';
                 el.style.cursor = 'pointer';
 
-                // 2. CONVERTIM COORDONATELE (Critic!)
                 const lat = parseFloat(h.latitude);
                 const lng = parseFloat(h.longitude);
 
-                // 3. Adăugăm pe hartă
                 new maplibregl.Marker({ element: el })
-                    .setLngLat([lng, lat]) // MapLibre vrea [Lng, Lat]
+                    .setLngLat([lng, lat]) 
                     .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(`
                         <div style="text-align:center;">
                             <b style="color:#f59e0b">${h.type}</b><br>
@@ -1045,16 +978,13 @@ async function loadHazards() {
     }
 }
 
-// === BIDIRECTIONAL TRACKING: MARKER UPDATES ===
 
-// For VICTIM: Update guardian's marker position on the map
 window.updateGuardianMarkerOnMap = function(lat, lng) {
     if (!window.map) {
         console.warn("Map not initialized for guardian marker update");
         return;
     }
     
-    // Create or update guardian marker
     if (!window.guardianTrackingMarker) {
         const el = document.createElement('div');
         el.style.width = '32px';
@@ -1073,7 +1003,6 @@ window.updateGuardianMarkerOnMap = function(lat, lng) {
         
         console.log("✅ Guardian marker created at:", lat, lng);
         
-        // Auto-zoom to show both victim and guardian
         if (window.userLat && window.userLng) {
             const bounds = new maplibregl.LngLatBounds();
             bounds.extend([lng, lat]);
@@ -1085,26 +1014,21 @@ window.updateGuardianMarkerOnMap = function(lat, lng) {
         console.log("📍 Guardian marker updated:", lat, lng);
     }
     
-    // Optional: Draw line between victim and guardian
     updateTrackingLine();
 };
 
-// For GUARDIAN: Update victim's marker position on the map
 window.updateVictimMarkerOnMap = function(lat, lng) {
     if (!window.map) {
         console.warn("Map not initialized for victim marker update");
         return;
     }
     
-    // Update the existing target marker if it exists
     if (targetMarker) {
         targetMarker.setLngLat([lng, lat]);
         console.log("📍 Victim marker updated:", lat, lng);
         
-        // Auto-pan map to keep victim in view
         window.map.panTo([lng, lat], { duration: 1000 });
     } else {
-        // Create victim marker if it doesn't exist
         const el = document.createElement('div');
         el.style.width = '24px';
         el.style.height = '24px';
@@ -1120,13 +1044,11 @@ window.updateVictimMarkerOnMap = function(lat, lng) {
         console.log("✅ Victim marker created at:", lat, lng);
     }
     
-    // Update route if both positions are known
     if (window.userLat && window.userLng) {
         drawRoute([window.userLng, window.userLat], [lng, lat], 'driving');
     }
 };
 
-// Helper: Draw line connecting victim and guardian
 function updateTrackingLine() {
     if (!window.guardianTrackingMarker || !window.userLat || !window.userLng) return;
     

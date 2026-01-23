@@ -1,31 +1,23 @@
 // === AUTH & SESSION ===
 
-// 1. Verifică sesiunea la încărcare
 window.checkSession = function() {
     const token = localStorage.getItem("nightguard_token");
-    
-    // Selectăm elementele
     const landingView = document.getElementById("landing-view");
     const dashboardView = document.getElementById("dashboard-view");
     const bottomNav = document.getElementById("bottom-nav"); // Bara de jos
     const startOverlay = document.getElementById("start-overlay");
 
     if (token) {
-        // === CAZ 1: UTILIZATOR LOGAT ===
         if(landingView) landingView.classList.add("hidden");      // Ascunde Login
         if(dashboardView) dashboardView.classList.remove("hidden"); // Arată Dashboard
         
-        // AICI: Arată bara doar când ești logat
         if(bottomNav) bottomNav.classList.remove("hidden"); 
         
-        // Încarcă datele utilizatorului
         loadUserProfile();
         
-        // Inițializează modulele
         if(window.initGuardianLogic) window.initGuardianLogic();
         if(window.initSocketConnection) window.initSocketConnection();
 
-        // Overlay pentru senzori (dacă e cazul)
         if (typeof nightGuardIoT !== 'undefined' && !nightGuardIoT.sensorsActive) {
             if(startOverlay) {
                 startOverlay.style.display = "flex"; 
@@ -43,15 +35,12 @@ window.checkSession = function() {
         }
 
     } else {
-        // === CAZ 2: UTILIZATOR NELOGAT (SAU LOGOUT) ===
-        if(landingView) landingView.classList.remove("hidden");   // Arată Login
-        if(dashboardView) dashboardView.classList.add("hidden");  // Ascunde Dashboard
+        if(landingView) landingView.classList.remove("hidden");  
+        if(dashboardView) dashboardView.classList.add("hidden");  
         
-        // === FIX CRITIC AICI ===
-        // Ascundem bara de jos forțat dacă nu există token!
         if(bottomNav) {
             bottomNav.classList.add("hidden"); 
-            bottomNav.style.display = 'none'; // Siguranță dublă
+            bottomNav.style.display = 'none';
         }
         
         if(startOverlay) startOverlay.style.display = "none";
@@ -80,13 +69,11 @@ window.initAuthForms = function() {
         };
     }
 
-    // Login Submit
     const loginForm = document.getElementById("loginForm");
     if(loginForm) {
         loginForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             
-            // Încercăm să pornim senzorii la login (best effort)
             if(typeof nightGuardIoT !== 'undefined') await nightGuardIoT.init();
             
             const email = document.getElementById("loginEmail").value;
@@ -102,7 +89,7 @@ window.initAuthForms = function() {
                 
                 if (response.ok) { 
                     localStorage.setItem("nightguard_token", data.token); 
-                    window.checkSession(); // Asta va declanșa afișarea dashboard-ului și a barei
+                    window.checkSession(); 
                 } else { 
                     alert(data.error); 
                 }
@@ -143,15 +130,10 @@ window.initAuthForms = function() {
     const handleLogout = () => { 
         localStorage.removeItem("nightguard_token");
         
-        // Ascundem tot ce ține de user logat
         document.getElementById("dashboard-view").classList.add("hidden");
         const bottomNav = document.getElementById("bottom-nav");
-        if(bottomNav) bottomNav.classList.add("hidden"); // Ascundem bara explicit
-        
-        // Arătăm login
+        if(bottomNav) bottomNav.classList.add("hidden"); 
         document.getElementById("landing-view").classList.remove("hidden");
-        
-        // Opțional: Refresh pentru a curăța starea JS
         window.location.reload(); 
     };
     

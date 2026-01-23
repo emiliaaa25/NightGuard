@@ -1,6 +1,6 @@
 const pool = require('../config/db');
 
-// --- 1. HANDLE PANIC (GPS + WebSockets) ---
+// 1. HANDLE PANIC 
 const handlePanicAlert = async (req, res) => {
     const { latitude, longitude, trigger_method } = req.body;
     const userId = req.user.id;
@@ -37,7 +37,6 @@ const handlePanicAlert = async (req, res) => {
         console.log(`Found ${guardians.length} active guardians. Notifying them now...`);
 
         // D. Send WebSocket notification to guardians
-        // REMOVED EMOJI from message
         guardians.forEach(guardian => {
             io.to(`user_${guardian.id}`).emit('emergency_alert', {
                 alertId: alertResult.rows[0].id,
@@ -64,7 +63,7 @@ const handlePanicAlert = async (req, res) => {
     }
 };
 
-// --- 2. HANDLE AUDIO UPLOAD ---
+// 2. HANDLE AUDIO UPLOAD 
 const handleAudioUpload = async (req, res) => {
     try {
         if (!req.file) {
@@ -74,10 +73,8 @@ const handleAudioUpload = async (req, res) => {
         const alertId = req.body.alertId; 
         const filename = req.file.filename;
 
-        // REMOVED EMOJI from console log
         console.log(`[AUDIO] Evidence Received for Alert ${alertId}: ${filename}`);
 
-        // Update DB with filename
         await pool.query(
             "UPDATE alerts SET audio_url = $1 WHERE id = $2",
             [filename, alertId]
@@ -90,13 +87,10 @@ const handleAudioUpload = async (req, res) => {
         res.status(500).json({ error: "Failed to save evidence" });
     }
 };
-// controllers/iotController.js
 
 const reportHazard = async (req, res) => {
-    // 1. Extragem datele din body
     const { latitude, longitude, type, description } = req.body;
     
-    // 2. Extragem ID-ul userului din token (req.user vine din middleware)
     const userId = req.user.id; 
 
     console.log(`📝 Reporting Hazard: ${type} at ${latitude}, ${longitude} by User ${userId}`);
@@ -112,10 +106,9 @@ const reportHazard = async (req, res) => {
         res.status(500).json({ error: "Failed to report hazard" });
     }
 };
-// --- SAFEROUTE: GET SAFETY MAP DATA ---
+// 3. GET SAFETY MAP DATA
 const getSafetyMapData = async (req, res) => {
     try {
-        // SQL Corect (fără ' la final)
         const reports = await pool.query(
             "SELECT latitude, longitude, type, description, created_at FROM safety_reports"
         );

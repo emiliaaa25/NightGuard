@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS users (
     bio TEXT,
     avatar_url VARCHAR(255),
     
-    -- Guardian & Location Specifics (From Image 1)
     is_guardian BOOLEAN DEFAULT FALSE,
     last_latitude NUMERIC,
     last_longitude NUMERIC,
@@ -22,11 +21,9 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexing for performance
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_username ON users(username);
 
--- Trigger for updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -78,12 +75,11 @@ CREATE TABLE IF NOT EXISTS route_posts (
     start_lat DECIMAL(10, 8),
     start_lng DECIMAL(11, 8),
     destination_name VARCHAR(100), -- Ex: "Tudor Vladimirescu", "Corp A"
-    departure_time TIMESTAMP,      -- Când vrea să plece
+    departure_time TIMESTAMP,     
     status VARCHAR(20) DEFAULT 'ACTIVE', -- 'ACTIVE', 'MATCHED', 'EXPIRED'
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Index pentru căutări rapide
 CREATE INDEX idx_routes_status ON route_posts(status);
 
 CREATE TABLE IF NOT EXISTS buddy_messages (

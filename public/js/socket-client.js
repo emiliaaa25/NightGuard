@@ -1,10 +1,7 @@
-// === SOCKET.IO CLIENT GLOBAL ===
 
-// 1. Immediate Initialization
-// Check if IO is loaded
 if (typeof io !== 'undefined') {
     const socket = io(); 
-    window.socket = socket; // <--- CRITICAL: Make socket global immediately
+    window.socket = socket; 
     console.log("✅ Socket initialized globally.");
 } else {
     console.error("❌ Socket.io library not loaded!");
@@ -19,8 +16,7 @@ window.initSocketConnection = async function() {
         const data = await response.json();
         
         if (data.user) {
-            // === SAVE USER ID GLOBALLY ===
-            window.currentUserId = data.user.id; // <--- NEW CRITICAL LINE: Save ID globally
+            window.currentUserId = data.user.id; 
 
             // Connect to our user channel
             window.socket.emit('join_user_room', data.user.id);
@@ -29,7 +25,7 @@ window.initSocketConnection = async function() {
     } catch (e) { console.error(e); }
 }
 
-// 2. LISTEN FOR EVENTS (Using window.socket)
+// 2. LISTEN FOR EVENTS 
 if (window.socket) {
     
     // --- FRIEND JOURNEY ALERT ---
@@ -66,9 +62,28 @@ if (window.socket) {
         }
     });
 
-    // --- SOS ALERT ---
+    // --- FRIEND JOURNEY ENDED ---
+    window.socket.on('friend_journey_ended', (data) => {
+        // Only remove the banner when user marked SAFE
+        if (data?.status === 'SAFE') {
+            const card = document.getElementById(`feed-${data.friendId}`);
+            if (card) card.remove();
+
+            const list = document.getElementById('feeds-list');
+            const container = document.getElementById('active-feeds-container');
+            if (list && container) {
+                const hasItems = list.children && list.children.length > 0;
+                if (!hasItems) {
+                    container.classList.add('hidden');
+                    container.removeAttribute('style');
+                }
+            }
+        }
+        // For TIMEOUT or other statuses, keep banner visible.
+    });
+
+    // SOS ALERT 
     window.socket.on('emergency_alert', (data) => {
-        // Store alert data globally for acceptance
         window.currentAlertData = data;
         
         const modal = document.getElementById('guardian-alert-modal');
@@ -82,7 +97,7 @@ if (window.socket) {
         if(navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
     });
 
-    // --- GUARDIAN COMING (Victim receives this) ---
+    //GUARDIAN COMING 
     window.socket.on('guardian_coming', (data) => {
         console.log("✅ Guardian accepted! Help is coming:", data);
         
@@ -99,7 +114,6 @@ if (window.socket) {
             window.socket.emit('join_tracking_room', { alertId: data.alertId });
         }
         
-        // Show "Help is on the way" UI
         if (window.showHelpIsComingUI) {
             window.showHelpIsComingUI(data);
         }
@@ -107,7 +121,7 @@ if (window.socket) {
         if(navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
     });
     
-    // --- RESCUE MISSION STARTED (Guardian receives this) ---
+    // RESCUE MISSION STARTED 
     window.socket.on('rescue_mission_started', (data) => {
         console.log("🚨 Rescue mission confirmed:", data);
         
@@ -129,7 +143,7 @@ if (window.socket) {
         }
     });
     
-    // --- GUARDIAN LOCATION UPDATE (Victim sees guardian moving) ---
+    // GUARDIAN LOCATION UPDATE 
     window.socket.on('update_guardian_location', (data) => {
         console.log("📍 Guardian location update:", data);
         
@@ -138,7 +152,7 @@ if (window.socket) {
         }
     });
     
-    // --- VICTIM LOCATION UPDATE (Guardian sees victim moving) ---
+    // VICTIM LOCATION UPDATE 
     window.socket.on('update_victim_location', (data) => {
         console.log("📍 Victim location update:", data);
         
@@ -147,7 +161,7 @@ if (window.socket) {
         }
     });
     
-    // --- VICTIM MARKED SAFE (Guardian receives this) ---
+    // VICTIM MARKED SAFE 
     window.socket.on('victim_marked_safe', (data) => {
         console.log("✅ Victim is safe:", data);
         
@@ -166,11 +180,10 @@ if (window.socket) {
         }, 2000);
     });
     
-    // --- VICTIM STOPPED RECORDING (Guardian receives this) ---
+    // VICTIM STOPPED RECORDING 
     window.socket.on('victim_recording_stopped_notification', (data) => {
         console.log("⏹️ Victim stopped recording:", data);
         
-        // Show notification but don't disrupt rescue operation
         if (Notification.permission === 'granted') {
             new Notification('Recording Stopped', {
                 body: 'Victim stopped recording but emergency is still active',
@@ -189,16 +202,10 @@ window.acceptAlert = function() {
         console.error("No alert data available");
         return;
     }
-    
-    // Extract victim ID from alert data
-    // We need to modify the backend to send victimId in the alert
     const alertId = window.currentAlertData.alertId;
     const victimLocation = window.currentAlertData.location;
     
-    // We need to extract victimId - let's get it from the alert
-    // For now, we'll emit with the data we have and let backend handle it
     if (window.socket && window.currentUserId) {
-        // Send acceptance to backend
         window.socket.emit('guardian_accept_alert', {
             alertId: alertId,
             victimId: window.currentAlertData.victimId || null
@@ -207,7 +214,6 @@ window.acceptAlert = function() {
         console.log("✅ Guardian accepted alert:", alertId);
     }
     
-    // Start rescue mission on map
     if (victimLocation && window.startRescueMission) {
         window.startRescueMission(victimLocation.lat, victimLocation.lng);
     }

@@ -7,14 +7,13 @@ class VirtualEscort {
         this.timerInterval = null;
         this.endTime = null;
         this.watchId = null;
-        this.destinationLatLng = null; // Final Coordinates
+        this.destinationLatLng = null; 
     }
     
     // 1. Open Setup
     openSetup() {
         window.isEscortSetupMode = true
         window.openCommunityMap();
-        // document.getElementById('modal-escort-setup').classList.remove('hidden');
         document.getElementById('escort-estimates').classList.add('hidden');
         document.getElementById('btn-start-escort').classList.add('hidden');
     }
@@ -22,8 +21,7 @@ class VirtualEscort {
     // 2. User Picks Destination
     pickDestinationOnMap() {
         document.getElementById('modal-escort-setup').classList.add('hidden');
-        // window.openCommunityMap(); // Opens Safety Map
-        window.isEscortSetupMode = true; // Flag for map.js
+        window.isEscortSetupMode = true; 
         alert("Tap destination on map.");
     }
 
@@ -33,9 +31,6 @@ class VirtualEscort {
         this.destinationLatLng = destLatLng; 
         
         document.getElementById('modal-escort-setup').classList.remove('hidden');
-        // Keep map open in background
-        // window.isEscortSetupMode = false;
-
         const minutes = Math.ceil(seconds / 60);
         const buffer = 5; 
         const total = minutes + buffer;
@@ -77,10 +72,10 @@ class VirtualEscort {
         // Start GPS
         this.startTracking();
 
-        // --- SOCKET COMMUNICATION FIX ---
+        // SOCKET COMMUNICATION 
         console.log("🚀 PREPARING TO SEND ESCORT SIGNAL...");
 
-        // 1. Auto-healing: If socket is missing, try to reconnect
+        // If socket is missing, try to reconnect
         if (!window.socket && typeof io !== 'undefined') {
             console.warn("⚠️ Socket object missing. Attempting reconnection...");
             window.socket = io();
@@ -89,17 +84,17 @@ class VirtualEscort {
         // 2. Send Signal
         if (window.socket && window.socket.connected) {
             window.socket.emit('escort_start', {
+                userId: window.currentUserId,
                 duration: this.totalDurationMs,
                 destination: this.destinationLatLng
             });
             console.log("✅ SIGNAL SENT: escort_start");
         } else {
-            // We don't alert() here to avoid blocking the user experience, 
-            // but we log the error. The Journey continues locally.
             console.warn("⚠️ Offline Mode: Escort started locally, but server not reachable.");
             if(window.socket) {
                 // Try emitting anyway, it might buffer
                 window.socket.emit('escort_start', {
+                    userId: window.currentUserId,
                     duration: this.totalDurationMs,
                     destination: this.destinationLatLng
                 });
@@ -137,7 +132,6 @@ class VirtualEscort {
             // A. Send to server (Only if connected)
             if(window.socket && window.socket.connected) {
                 window.socket.emit('escort_update', { lat, lng });
-                // console.log("📡 Sent GPS update"); // Uncomment for debug
             }
 
             // B. Update Map Visuals (My Location)
@@ -157,26 +151,40 @@ class VirtualEscort {
 
     // 7. Safe Arrival
     imSafe() {
-        this.stopEscort();
+        // If panic recording is active, stop it first
+        if (window.nightGuardIoT && window.nightGuardIoT.isRecording) {
+            console.log("Stopping panic recording before marking safe...");
+            window.nightGuardIoT.stopEmergency();
+        }
+        
+        this.stopEscort('SAFE');
         alert("Journey Complete! Stay safe.");
     }
 
     // 8. Timeout -> PANIC
     handleExpiration() {
-        this.stopEscort();
+        this.stopEscort('TIMEOUT');
         if(window.nightGuardIoT) window.nightGuardIoT.triggerPanicMode('ESCORT_TIMEOUT');
     }
 
-    stopEscort() {
+    stopEscort(status) {
+        // Prevent double-stopping
+        if (!this.isActive && status !== 'SAFE') return;
+
         this.isActive = false;
         clearInterval(this.timerInterval);
         if(this.watchId) navigator.geolocation.clearWatch(this.watchId);
         
-        document.getElementById('escort-active-overlay').classList.add('hidden');
-        document.getElementById('route-controls').classList.remove('hidden'); // Show search again
+        // Only hide overlay on explicit SAFE; keep it visible on TIMEOUT for user to press I'M SAFE again
+        if (status === 'SAFE') {
+            const overlay = document.getElementById('escort-active-overlay');
+            if (overlay) overlay.classList.add('hidden');
+            const routeControls = document.getElementById('route-controls');
+            if (routeControls) routeControls.classList.remove('hidden');
+        }
         
         // Notify server
-        if(window.socket) window.socket.emit('escort_end', { status: 'SAFE' });
+        if(window.socket) window.socket.emit('escort_end', { status: status || 'UNKNOWN' });
     }
 
     getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {

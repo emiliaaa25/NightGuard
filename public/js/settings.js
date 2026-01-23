@@ -1,13 +1,10 @@
-/**
- * SETTINGS & CONTACTS MANAGER (CONNECTED TO DB)
- */
+
 class SettingsManager {
     constructor() {
         this.init();
     }
 
     init() {
-        // Form Listener for Add Contact
         const form = document.getElementById('form-add-contact');
         if(form) {
             form.addEventListener('submit', (e) => {
@@ -76,10 +73,8 @@ class SettingsManager {
                     const item = document.createElement('div');
                     item.className = 'contact-item';
                     
-                    // Generate initials from name
                     const initials = this.getInitials(c.name);
                     
-                    // Get avatar color based on name (consistent color for same name)
                     const avatarColor = this.getAvatarColor(c.name);
                     
                     item.innerHTML = `
@@ -167,13 +162,11 @@ class SettingsManager {
     getAvatarColor(name) {
         if (!name) return '#6b7280';
         
-        // Generate a consistent color based on name
         let hash = 0;
         for (let i = 0; i < name.length; i++) {
             hash = name.charCodeAt(i) + ((hash << 5) - hash);
         }
         
-        // Color palette - soft, pleasant colors
         const colors = [
             'linear-gradient(135deg, #ec4899, #db2777)', // Pink
             'linear-gradient(135deg, #3b82f6, #2563eb)', // Blue
@@ -189,7 +182,6 @@ class SettingsManager {
         return colors[index];
     }
 
-    // 8. Escape HTML to prevent XSS
     escapeHtml(text) {
         if (!text) return '';
         const div = document.createElement('div');

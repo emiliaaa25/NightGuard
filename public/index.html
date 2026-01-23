@@ -118,9 +118,9 @@
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="showSection('settings')" class="icon-btn mobile-only"><i
-                            class="ph ph-gear"></i></button>
+
                     <button id="logoutBtnMobile" class="icon-btn mobile-only"><i class="ph ph-sign-out"></i></button>
+                    
                 </div>
                 <div class="desktop-only">
                     <div id="guardian-controls-container"></div>
@@ -141,6 +141,18 @@
                         </div>
                     </div>
                     <div id="btn-panic" class="status-pill">STANDBY</div>
+                </div>
+
+                <!-- Live Journeys from Trusted Contacts -->
+                <div id="active-feeds-container" class="grid-card glass-panel hidden" style="border: 1px solid #fbcfe8;">
+                    <div class="card-header" style="border-bottom-color: #fbcfe8;">
+                        <i class="ph-fill ph-users" style="color: #ec4899;"></i>
+                        <h3 style="color: #831843;">Trusted Contacts – Live Journeys</h3>
+                    </div>
+                    <div id="feeds-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                    <div class="text-muted" style="font-size: 12px; margin-top: 8px;">
+                        Contacts with accounts will appear here when sharing.
+                    </div>
                 </div>
 
                 <div class="grid-card glass-panel"
@@ -297,6 +309,7 @@
         <button onclick="showSection('dashboard')" class="nav-link active" id="mob-nav-dash"><i
                 class="ph ph-grid-four"></i><span>Home</span></button>
         <button onclick="openCommunityMap()" class="nav-link"><i class="ph ph-map-trifold"></i><span>Map</span></button>
+        <button onclick="openHistoryModal()" class="nav-link"><i class="ph ph-clock-counter-clockwise"></i><span>History</span></button>
         <button onclick="showSection('settings')" class="nav-link" id="mob-nav-settings"><i
                 class="ph ph-gear"></i><span>Settings</span></button>
     </nav>
@@ -371,7 +384,7 @@
             </div>
         </div>
         <div class="glass-panel"
-            style="position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 24px 24px 0 0; padding: 24px; pointer-events: auto; background: rgba(255, 255, 255, 0.95);">
+            style="position: absolute; bottom: 0; left: 0; width: 100%; border-radius: 24px 24px 0 0; padding: 24px; pointer-events: auto; background: rgba(255, 255, 255, 0.95); z-index: 2001;">
             <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #1f2937;">
                 <i class="ph-fill ph-person-walking text-primary"></i> Live Monitoring Active
             </h3>
@@ -380,7 +393,7 @@
                     style="border-color: #ef4444; color: #ef4444; font-weight: 800;">
                     <i class="ph-fill ph-warning"></i> SOS
                 </button>
-                <button onclick="virtualEscort.imSafe()" class="btn-primary" style="background: #10b981; border: none;">
+                <button id="btn-escort-safe" onclick="virtualEscort.imSafe()" class="btn-primary" style="background: #10b981; border: none;">
                     <i class="ph-bold ph-check"></i> I'M SAFE
                 </button>
             </div>
@@ -523,7 +536,6 @@
         </div>
     </div>
 
-    <!-- Rating Modal (Pink Theme) -->
     <div id="modal-rating" class="modal-backdrop hidden" style="z-index: 3500;">
         <div class="glass-panel"
             style="background: linear-gradient(135deg,#fff1f2,#ffe4f0); padding: 18px; border-radius: 20px; width: 90%; max-width: 360px; box-shadow: 0 20px 50px rgba(236,72,153,0.12); border: 1px solid rgba(236,72,153,0.08);">
@@ -564,7 +576,6 @@
     <script src="./js/main.js"></script>
 
     <script>
-        // NAVIGATION LOGIC
         window.showSection = function (sectionId) {
             const dashboard = document.getElementById('section-dashboard');
             const settings = document.getElementById('section-settings');

@@ -3,13 +3,11 @@ const router = express.Router();
 const pool = require('../config/db');
 const authenticateToken = require('../middleware/authMiddleware');
 
-// 1. POST: Publică o rută nouă
 router.post('/post', authenticateToken, async (req, res) => {
-    const { startLat, startLng, destination, timeOffset } = req.body; // timeOffset = minute peste cat timp pleaca
+    const { startLat, startLng, destination, timeOffset } = req.body; 
     const userId = req.user.id;
 
     try {
-        // Calculăm timpul de plecare (Acum + minute)
         const departureTime = new Date(Date.now() + timeOffset * 60000);
 
         await pool.query(
@@ -23,13 +21,10 @@ router.post('/post', authenticateToken, async (req, res) => {
     }
 });
 
-// 2. GET: Găsește colegi în zonă (Simplificat)
 router.get('/nearby', authenticateToken, async (req, res) => {
-    const { lat, lng } = req.query; // Locația mea curentă
+    const { lat, lng } = req.query; 
 
     try {
-        // Luăm rutele ACTIVE din ultimele 1 hour care NU sunt ale mele
-        // Inclusiv calcul medie rating pentru fiecare utilizator (1 zecimal)
         const result = await pool.query(`
             SELECT r.id, r.destination_name, r.departure_time, u.id as user_id, u.full_name, u.avatar_url,
                    COALESCE( ROUND( (SELECT AVG(stars) FROM user_ratings ur WHERE ur.target_id = u.id)::numeric, 1), 0) as avg_rating
@@ -48,9 +43,7 @@ router.get('/nearby', authenticateToken, async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
-// ... importuri existente ...
 
-// 3. GET: Istoricul Chat-ului
 router.get('/chat/:routeId', authenticateToken, async (req, res) => {
     const { routeId } = req.params;
     try {
@@ -68,14 +61,10 @@ router.get('/chat/:routeId', authenticateToken, async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
-// ... (celelalte rute rămân la fel) ...
 
-// 4. GET: Cursa mea activă (Ca să pot redeschide chat-ul)
 router.get('/active-walk', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     try {
-        // Căutăm o rută unde statusul e MATCHED sau ACTIVE
-        // ȘI unde utilizatorul este fie Creator (user_id), fie Partener (buddy_id)
         const result = await pool.query(`
             SELECT r.id, r.destination_name, r.status, 
                    u.id as owner_id, u.full_name as owner_name, 
@@ -100,7 +89,6 @@ router.get('/active-walk', authenticateToken, async (req, res) => {
     }
 });
 
-// POST: Save a rating for a user
 router.post('/rate', authenticateToken, async (req, res) => {
     const reviewerId = req.user.id;
     const { targetId, stars, comment } = req.body;
@@ -113,7 +101,6 @@ router.post('/rate', authenticateToken, async (req, res) => {
             [reviewerId, targetId, stars, comment || null]
         );
 
-        // Return new average
         const avgRes = await pool.query(`SELECT COALESCE(ROUND(AVG(stars)::numeric,1),0) as avg_rating FROM user_ratings WHERE target_id = $1`, [targetId]);
 
         res.json({ success: true, avg: avgRes.rows[0].avg_rating });
@@ -128,33 +115,26 @@ router.post('/end-walk', authenticateToken, async (req, res) => {
     const userId = req.user.id;
 
     try {
-        // 1. Find the route and partner info
         const routeRes = await pool.query(`SELECT id, user_id, buddy_id FROM route_posts WHERE id = $1 LIMIT 1`, [routeId]);
         if (routeRes.rows.length === 0) return res.status(404).json({ error: 'Route not found' });
         const route = routeRes.rows[0];
 
-        // 2. Ensure the requester is part of the route
         if (parseInt(route.user_id) !== parseInt(userId) && parseInt(route.buddy_id) !== parseInt(userId)) {
             return res.status(403).json({ error: 'Not authorized for this route' });
         }
 
-        // 3. Determine partner
         let partnerId = null;
         if (parseInt(route.user_id) === parseInt(userId)) {
-            // Caller is the owner -> partner is buddy (may be null)
             partnerId = route.buddy_id || null;
         } else {
-            // Caller is not owner -> partner should be the owner
             partnerId = route.user_id || null;
         }
 
-        // 4. Update status to COMPLETED
         await pool.query(
             "UPDATE route_posts SET status = 'COMPLETED' WHERE id = $1",
             [routeId]
         );
 
-        // 5. Fetch partner name if exists
         let partnerName = null;
         if (partnerId) {
             const pRes = await pool.query('SELECT id, full_name FROM users WHERE id = $1', [partnerId]);

@@ -16,7 +16,6 @@ const storage = multer.diskStorage({
         cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
-        // Păstrăm extensia originală trimisă de browser (mp4 sau webm)
         const ext = path.extname(file.originalname) || '.webm';
         
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

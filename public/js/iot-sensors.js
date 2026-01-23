@@ -1,10 +1,5 @@
-/**
- * NIGHTGUARD IOT SENSOR MODULE
- * Shake -> Start Recording -> Stop Manual -> Upload
- */
 class NightGuardIoT {
     constructor() {
-        // SENSITIVITY SETTINGS
         this.shakeThreshold = 10; 
         this.shakeTimeout = 1000; 
         
@@ -19,12 +14,11 @@ class NightGuardIoT {
         this.isRecording = false; 
     }
 
-    // === CRITICAL: MUST BE CALLED FROM USER INTERACTION (START BUTTON) ===
     async init() {
         if (this.sensorsActive) return;
         console.log("Initializing Sensors...");
 
-        // 1. REQUEST MOTION FIRST (CRITICAL FOR IOS)
+        // 1. REQUEST MOTION FIRST 
         if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
             try {
                 console.log("Requesting iOS Motion Permission...");
@@ -50,7 +44,6 @@ class NightGuardIoT {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             console.log("Microphone Access Granted");
-            // Stop stream immediately, will restart on panic
             stream.getTracks().forEach(track => track.stop()); 
         } catch (e) { 
             console.warn("Microphone Permission Missing"); 
@@ -146,8 +139,6 @@ class NightGuardIoT {
                     if(res.ok) {
                         this.currentAlertId = data.alertId;
                         console.log("SOS Alert Sent");
-                        
-                        // Store alert ID globally for tracking
                         window.currentSOSAlertId = data.alertId;
                         
                         // Start victim location tracking
@@ -196,6 +187,13 @@ class NightGuardIoT {
             this.resetUI();
         }
         this.isRecording = false;
+        
+        // If escort is active, don't show alert - just end silently
+        if (window.virtualEscort && window.virtualEscort.isActive) {
+            console.log("Escort still active after panic stop");
+            return;
+        }
+        
         alert("Emergency Ended. Evidence uploaded.");
     }
 
@@ -230,16 +228,13 @@ class NightGuardIoT {
 
 const nightGuardIoT = new NightGuardIoT();
 
-// === VICTIM UI: "HELP IS ON THE WAY" ===
 window.showHelpIsComingUI = function(data) {
     const card = document.querySelector('.panic-card');
     
     if (!card) return;
     
-    // Store data globally for tracking
     window.guardianTrackingData = data;
     
-    // Update the panic card to show help is coming
     card.classList.add('help-coming');
     card.classList.remove('is-recording');
     
@@ -255,7 +250,6 @@ window.showHelpIsComingUI = function(data) {
                            `<span style="font-weight: 700;">ETA: ${data.eta} minutes</span>`;
     }
     
-    // Replace card content with large action buttons
     const panicContent = card.querySelector('.panic-content');
     if (panicContent) {
         const actionsHTML = `
@@ -287,10 +281,8 @@ window.showHelpIsComingUI = function(data) {
         window.savedRescueActionsHTML = actionsHTML;
     }
     
-    // Vibrate to notify
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     
-    // Show notification
     if (Notification.permission === 'granted') {
         new Notification('Help is Coming!', {
             body: `Guardian ${data.guardianName} is on the way. ETA: ${data.eta} minutes`,
@@ -299,18 +291,15 @@ window.showHelpIsComingUI = function(data) {
     }
 };
 
-// === VICTIM LOCATION TRACKING ===
 let victimLocationInterval = null;
 
 window.startVictimLocationTracking = function(alertId) {
     console.log("📍 Starting victim location tracking for alert:", alertId);
     
-    // Clear any existing interval
     if (victimLocationInterval) {
         clearInterval(victimLocationInterval);
     }
     
-    // Send location every 5 seconds
     victimLocationInterval = setInterval(() => {
         if (navigator.geolocation && window.socket) {
             navigator.geolocation.getCurrentPosition(
@@ -321,7 +310,6 @@ window.startVictimLocationTracking = function(alertId) {
                         lat: latitude,
                         lng: longitude
                     });
-                    console.log(`📍 Victim location sent: ${latitude}, ${longitude}`);
                 },
                 (err) => console.warn("GPS error:", err),
                 { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
@@ -360,7 +348,6 @@ window.startGuardianLocationTracking = function(alertId) {
                         lat: latitude,
                         lng: longitude
                     });
-                    console.log(`📍 Guardian location sent: ${latitude}, ${longitude}`);
                 },
                 (err) => console.warn("GPS error:", err),
                 { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
@@ -377,7 +364,7 @@ window.stopGuardianLocationTracking = function() {
     }
 };
 
-// === VICTIM ACTION BUTTONS ===
+//VICTIM ACTION BUTTONS
 
 // 1. View Guardian on Map
 window.viewGuardianOnMap = function() {
@@ -386,18 +373,14 @@ window.viewGuardianOnMap = function() {
         return;
     }
     
-    // Save current state so we don't lose it
     window.inGuardianViewMode = true;
     
-    // Store rescue actions container to restore it later
     const rescueActions = document.getElementById('rescue-actions');
     if (rescueActions) {
         window.savedRescueActionsHTML = rescueActions.outerHTML;
     }
     
-    console.log("📍 Opening guardian location map...");
     
-    // Open tracking map mode for victim
     if (window.openVictimTrackingMap) {
         window.openVictimTrackingMap(window.guardianTrackingData);
     } else {
@@ -453,13 +436,11 @@ window.stopRecordingOnly = function() {
 
 // 3. Mark as Safe (end alert)
 window.markAsSafe = function() {
-    // Don't trigger if we're viewing map
     if (window.inGuardianViewMode) {
         console.log("⚠️ Cannot mark as safe while viewing map");
         return;
     }
     
-    // Make sure we're in rescue mode
     if (!window.activeRescue || !window.activeRescue.alertId) {
         console.warn("⚠️ Not in rescue mode - cannot mark as safe");
         return;

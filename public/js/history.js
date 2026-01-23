@@ -1,4 +1,4 @@
-// === HISTORY & AUDIO (Vibrant Premium Theme) ===
+//HISTORY & AUDIO
 
 window.openHistoryModal = async function() {
     const modal = document.getElementById('modal-history');
@@ -10,7 +10,6 @@ window.openHistoryModal = async function() {
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
     
-    // Loader elegant
     list.innerHTML = `
         <div style="display:flex; flex-direction:column; align-items:center; padding: 40px; color: #9ca3af;">
             <div class="loader-ring" style="width:24px; height:24px; border-width:3px; margin-bottom:12px;"></div>
@@ -39,7 +38,7 @@ window.openHistoryModal = async function() {
             const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute:'2-digit' });
             
-            // Audio Player - Design curat
+            // Audio Player 
             let audioSection = '';
             if (item.audio_url) {
                 audioSection = `
@@ -61,7 +60,6 @@ window.openHistoryModal = async function() {
             // Google Maps Link
             const mapLink = `https://www.google.com/maps/dir/?api=1&destination=${item.latitude},${item.longitude}`;
 
-            // Card HTML - Design Modern
             return `
                 <div style="
                     background: white; 

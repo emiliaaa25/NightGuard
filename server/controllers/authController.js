@@ -2,7 +2,6 @@ const pool = require('../config/db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-// Helper: generare JWT
 const generateToken = (user) => {
     return jwt.sign(
         { id: user.id, email: user.email, username: user.username },
@@ -20,7 +19,6 @@ exports.register = async (req, res) => {
     }
 
     try {
-        // Verificare duplicate
         const userExists = await pool.query(
             'SELECT * FROM users WHERE email=$1 OR username=$2 OR phone=$3',
             [email, username, phone]
@@ -29,10 +27,8 @@ exports.register = async (req, res) => {
             return res.status(400).json({ error: 'Email, username, or phone already exists' });
         }
 
-        // Hash parola
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Insert user
         const result = await pool.query(
             'INSERT INTO users (username, email, phone, password, full_name) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, phone, full_name',
             [username, email, phone, hashedPassword, fullName]

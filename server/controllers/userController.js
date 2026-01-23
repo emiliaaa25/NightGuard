@@ -1,11 +1,8 @@
 const pool = require('../config/db');
 
-// --- 1. PROFIL & LOCAȚIE ---
-
-// Obține profilul userului (inclusiv rolul)
+// --- 1. PROFIL 
 exports.getProfile = async (req, res) => {
     try {
-        // Returnăm datele userului + rolul
         const result = await pool.query('SELECT id, full_name, username, email, phone, is_guardian, role FROM users WHERE id = $1', [req.user.id]);
         
         if (result.rows.length === 0) {
@@ -19,7 +16,7 @@ exports.getProfile = async (req, res) => {
     }
 };
 
-// Update Locație (Heartbeat pentru gardieni)
+// Update Locație 
 exports.updateLocation = async (req, res) => {
     const { latitude, longitude } = req.body;
     try {
@@ -34,13 +31,12 @@ exports.updateLocation = async (req, res) => {
     }
 };
 
-// Toggle ON/OFF DUTY (Doar pentru SECURITY sau ADMIN)
+// Toggle ON/OFF DUTY 
 exports.toggleGuardian = async (req, res) => {
     try {
         const userCheck = await pool.query('SELECT role FROM users WHERE id = $1', [req.user.id]);
         const role = userCheck.rows[0].role;
 
-        // Verificare strictă de rol
         if (role !== 'SECURITY' && role !== 'ADMIN' && role !== 'POLICE') {
             return res.status(403).json({ error: 'Unauthorized: You are not a verified Guardian.' });
         }
@@ -56,8 +52,7 @@ exports.toggleGuardian = async (req, res) => {
     }
 };
 
-// --- 2. SISTEM DE APLICARE (CIVILI) ---
-
+//2. SISTEM DE APLICARE 
 exports.applyForGuardian = async (req, res) => {
     const { phone, reason, experience } = req.body;
     
@@ -77,7 +72,7 @@ exports.applyForGuardian = async (req, res) => {
     }
 };
 
-// --- 3. SISTEM ADMIN (APROBARE/RESPINGERE) ---
+//3. SISTEM ADMIN 
 
 exports.getApplicants = async (req, res) => {
     try {
@@ -98,7 +93,6 @@ exports.approveGuardian = async (req, res) => {
         const adminCheck = await pool.query("SELECT role FROM users WHERE id = $1", [req.user.id]);
         if (adminCheck.rows[0].role !== 'ADMIN') return res.status(403).json({ error: "Unauthorized" });
 
-        // Promovăm userul la SECURITY
         await pool.query("UPDATE users SET role = 'SECURITY' WHERE id = $1", [applicantId]);
         res.json({ success: true });
     } catch (err) { 
@@ -113,7 +107,6 @@ exports.rejectGuardian = async (req, res) => {
         const adminCheck = await pool.query("SELECT role FROM users WHERE id = $1", [req.user.id]);
         if (adminCheck.rows[0].role !== 'ADMIN') return res.status(403).json({ error: "Unauthorized" });
 
-        // Retrogradăm userul la USER simplu
         await pool.query("UPDATE users SET role = 'USER' WHERE id = $1", [applicantId]);
         res.json({ success: true });
     } catch (err) { 
@@ -123,7 +116,6 @@ exports.rejectGuardian = async (req, res) => {
 };
 exports.getAlertHistory = async (req, res) => {
     try {
-        // Luăm ultimele 20 de alerte ale userului logat
         const result = await pool.query(
             "SELECT id, type, created_at, audio_url, latitude, longitude FROM alerts WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20",
             [req.user.id]
@@ -135,7 +127,7 @@ exports.getAlertHistory = async (req, res) => {
     }
 };
 
-// --- 4. GESTIUNE CONTACTE DE URGENȚĂ ---
+//4. GESTIUNE CONTACTE DE URGENȚĂ
 
 exports.getContacts = async (req, res) => {
     try {
